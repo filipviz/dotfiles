@@ -21,9 +21,10 @@ dotfiles config --local status.showUntrackedFiles no
 
 Add and commit your configs:
 ```bash
+# For example...
 dotfiles add .zshrc
-dotfiles add .config/lvim/
-dotfiles add .config/ghostty/
+dotfiles add .config/lvim/config.lua
+dotfiles add .config/ghostty/config
 dotfiles add .tmux.conf
 # ...and so forth
 dotfiles commit -m "Adding dotfiles"
@@ -32,7 +33,7 @@ dotfiles commit -m "Adding dotfiles"
 Push to remote:
 ```bash
 dotfiles remote add origin git@github.com:yourusername/dotfiles.git
-dotfiles push -u origin master
+dotfiles push
 ```
 
 ## How to Sync on a New Machine
