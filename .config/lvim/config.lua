@@ -13,11 +13,13 @@ lvim.plugins = {
       require("leap").add_default_mappings()
     end,
   },
+  { "rebelot/kanagawa.nvim" },
   {
-    "folke/tokyonight.nvim",
-    lazy = false,
-    priority = 1000,
-    opts = {},
+    "rose-pine/neovim",
+    name = "rose-pine",
+    config = function()
+      require("rose-pine").setup({ styles = { italic = false } })
+    end,
   },
 }
 
@@ -30,9 +32,9 @@ if status and output:match("Dark") then
 end
 
 if is_dark_mode then
-  lvim.colorscheme = "tokyonight-storm"
+  lvim.colorscheme = "kanagawa-wave"
 else
-  lvim.colorscheme = "tokyonight-day"
+  lvim.colorscheme = "rose-pine-dawn"
 end
 
 -- Standard vim options
@@ -45,7 +47,12 @@ lvim.keys.normal_mode["<ESC>"] = ":nohlsearch<CR>"
 
 lvim.builtin.cmp.on_config_done = function(cmp)
   cmp.setup.filetype({ "markdown", "md", "text", "gitcommit" }, {
-    enabled = false,  -- disable autocomplete for Markdown/text
+    enabled = false, -- disable autocomplete for Markdown/text
   })
 end
 
+-- Normal quotes
+vim.api.nvim_create_user_command('NormalQuotes', function()
+  vim.cmd [[silent! %s/[‘’]/'/g]]
+  vim.cmd [[silent! %s/[“”]/"/g]]
+end, { desc = 'Replace non-standard quotes with standard quotes' })

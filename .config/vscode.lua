@@ -1,5 +1,5 @@
--- Use system clipboard
-vim.opt.clipboard = "unnamedplus"
+vim.opt.clipboard = "unnamedplus" -- Use system clipboard
+vim.opt.scrolloff = 0
 
 -- Remove search highlighting on insert mode
 vim.api.nvim_create_autocmd("InsertEnter", {

@@ -1,13 +1,13 @@
 {
-  "editor.fontFamily": "'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace",
-  "editor.fontSize": 16, 
+  "editor.fontSize": 16,
   "vscode-neovim.neovimInitVimPaths.darwin": "/Users/f/.config/vscode.lua",
   "window.autoDetectColorScheme": true,
-  "workbench.preferredLightColorTheme": "Tokyo Night Light",
-  "workbench.preferredDarkColorTheme": "Tokyo Night",
+  "workbench.preferredLightColorTheme": "Monokai Pro Light (Filter Sun)",
+  "workbench.preferredDarkColorTheme": "Kanagawa Wave",
   "telemetry.telemetryLevel": "off",
   "workbench.activityBar.location": "top",
   "go.toolsManagement.autoUpdate": true,
+  "python.analysis.typeCheckingMode": "basic",
   "extensions.experimental.affinity": {
     "asvetliakov.vscode-neovim": 1
   },
@@ -19,5 +19,16 @@
     "plaintext": false,
     "markdown": false,
     "scminput": false
-  }
+  },
+  "workbench.settings.applyToAllProfiles": [
+    
+  ],
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
+  "jupyter.widgetScriptSources": [
+    "jsdelivr.com",
+    "unpkg.com"
+  ],
+  "editor.fontFamily": "'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace"
 }
