@@ -1,0 +1,6 @@
+font-size = 16
+font-family = Monaspace Xenon NF
+theme = light:Everforest Light Med,dark:Everforest Dark Hard
+shell-integration-features = ssh-env, ssh-terminfo
+bell-features = attention, title
+keybind = shift+enter=text:\x1b\r
