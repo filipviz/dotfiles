@@ -1,4 +1,4 @@
-model = "gpt-5-codex"
+model = "gpt-5.1-codex"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 file_opener = "none"
@@ -12,3 +12,6 @@ network_access = true
 
 [tui]
 notifications = true
+
+[notice]
+hide_gpt5_1_migration_prompt = true
