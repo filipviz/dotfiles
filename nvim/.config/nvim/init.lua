@@ -18,6 +18,7 @@ vim.opt.rtp:prepend(lazypath)
 -- Basic options
 vim.g.mapleader = " "
 
+vim.opt.splitright = true
 vim.opt.undofile = true
 vim.opt.number = true
 vim.opt.relativenumber = true
@@ -33,7 +34,7 @@ vim.opt.list = true
 vim.opt.listchars = { trail = "-", nbsp = "+", tab = "  ", extends = ">", precedes = "<" }
 vim.opt.shortmess:append("I")
 vim.opt.updatetime = 500
-vim.g.markdown_fenced_languages = { "html", "css", "javascript", "python", "lua", "go", "bash=sh", "c" }
+vim.g.markdown_fenced_languages = { "html", "css", "javascript", "python", "lua", "go", "bash=sh", "c", "cpp" }
 
 vim.opt.grepprg = "rg --vimgrep"
 vim.opt.grepformat = "%f:%l:%c:%m"
@@ -72,7 +73,39 @@ vim.api.nvim_create_autocmd({ "VimEnter", "FocusGained" }, {
 vim.keymap.set("n", "<Tab>", "<Cmd>bnext<CR>")
 vim.keymap.set("n", "<S-Tab>", "<Cmd>bprevious<CR>")
 vim.keymap.set("n", "<leader>e", "<Cmd>Le<CR>")
-vim.keymap.set("t", "<Esc>", "<C-\\><C-n>")
+vim.keymap.set("t", "<leader><Esc>", "<C-\\><C-n>")
+
+local term_bottom = { height = 12 }
+local function toggle_term_bottom()
+	if term_bottom.win and vim.api.nvim_win_is_valid(term_bottom.win) then
+		vim.api.nvim_win_close(term_bottom.win, true)
+		term_bottom.win = nil
+		return
+	end
+
+	vim.cmd("botright " .. term_bottom.height .. "split")
+	term_bottom.win = vim.api.nvim_get_current_win()
+
+if term_bottom.buf and vim.api.nvim_buf_is_valid(term_bottom.buf) then
+		vim.api.nvim_win_set_buf(term_bottom.win, term_bottom.buf)
+	else
+		vim.cmd("terminal")
+		term_bottom.buf = vim.api.nvim_get_current_buf()
+		vim.bo[term_bottom.buf].buflisted = false
+	end
+
+	vim.cmd.startinsert()
+end
+
+vim.api.nvim_create_autocmd("TermClose", {
+	callback = function(args)
+		if args.buf == term_bottom.buf then
+			term_bottom.buf = nil
+		end
+	end,
+})
+
+vim.keymap.set("n", "<leader>t", toggle_term_bottom)
 
 for _, key in ipairs({ "h", "j", "k", "l" }) do
 	vim.keymap.set("n", "<C-" .. key .. ">", "<C-w>" .. key)
@@ -150,6 +183,17 @@ require("lazy").setup({
 			},
 		},
 		{
+			"ibhagwan/fzf-lua",
+			dependencies = { "nvim-tree/nvim-web-devicons" },
+			opts = {},
+			keys = {
+				{ "<leader>ff", "<cmd>FzfLua files<CR>",     desc = "FzfLua files" },
+				{ "<leader>fs", "<cmd>FzfLua grep<CR>",      desc = "FzfLua grep" },
+				{ "<leader>fg", "<cmd>FzfLua live_grep<CR>", desc = "FzfLua live grep" },
+				{ "<leader>fd", "<cmd>FzfLua<CR>",           desc = "FzfLua default" },
+			},
+		},
+		{
 			"lewis6991/gitsigns.nvim",
 			event = { "BufReadPre", "BufNewFile" },
 			opts = {
@@ -215,8 +259,8 @@ require("lazy").setup({
 			config = function()
 				local cmp = require("cmp")
 
-				cmp.setup({
-					completion = { completeopt = "menu,menuone,noselect" },
+					cmp.setup({
+					completion = { autocomplete = false, completeopt = "menu,menuone,noselect" },
 					snippet = { expand = function() end },
 					sources = cmp.config.sources({
 						{ name = "nvim_lsp" },
@@ -334,7 +378,14 @@ require("lazy").setup({
 					},
 				})
 
-				vim.lsp.enable({ "lua_ls", "basedpyright", "bashls", "gopls" })
+				vim.lsp.config("clangd", {
+					capabilities = capabilities,
+					on_attach = on_attach,
+					cmd = { "clangd", "--background-index", "--clang-tidy" },
+					filetypes = { "c", "cpp", "objc", "objcpp", "cuda", "proto" },
+				})
+
+				vim.lsp.enable({ "lua_ls", "basedpyright", "bashls", "gopls", "clangd" })
 
 				vim.diagnostic.config({ float = { border = "rounded" } })
 			end,

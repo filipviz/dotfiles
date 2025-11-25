@@ -1,5 +1,13 @@
-# Enable colors
 autoload -U colors && colors
+setopt autocd
+stty stop undef  # Disable ctrl-s to freeze terminal.
+setopt interactive_comments
+
+# autoload -Uz vcs_info
+# precmd() { vcs_info }
+# zstyle ':vcs_info:git:*' formats '%b '
+# setopt PROMPT_SUBST
+# PROMPT='%F{green}%*%f %F{blue}%~%f %F{red}${vcs_info_msg_0_}%f$ '
 
 # Miscellaneous setup.
 alias ls='ls --color=auto'
@@ -29,6 +37,42 @@ bindkey -M menuselect 'k' vi-up-line-or-history
 bindkey -M menuselect 'l' vi-forward-char
 bindkey -M menuselect 'j' vi-down-line-or-history
 bindkey -v '^?' backward-delete-char
+
+# Change cursor shape for different vi modes.
+function zle-keymap-select () {
+    case $KEYMAP in
+        vicmd) echo -ne '\e[1 q';;      # block
+        viins|main) echo -ne '\e[5 q';; # beam
+    esac
+}
+zle -N zle-keymap-select
+zle-line-init() {
+    zle -K viins # initiate `vi insert` as keymap (can be removed if `bindkey -V` has been set elsewhere)
+    echo -ne "\e[5 q"
+}
+zle -N zle-line-init
+echo -ne '\e[5 q' # Use beam shape cursor on startup.
+preexec() { echo -ne '\e[5 q' ;} # Use beam shape cursor for each new prompt.
+
+# fzf bindings and helper
+source <(fzf --zsh)
+ff() {
+  fzf --height 40% --layout reverse \
+      --preview 'head -n $FZF_PREVIEW_LINES {} | cat -n' \
+      --bind 'enter:become(nvim {})'
+}
+
+alacritty_theme() {
+  [[ -z "$ALACRITTY_WINDOW_ID" ]] && return
+  local base="$HOME/.config/alacritty"
+  if defaults read -g AppleInterfaceStyle 2>/dev/null | grep -qi "Dark"; then
+    theme_file="$base/everforest_dark.toml"
+  else
+    theme_file="$base/everforest_light.toml"
+  fi
+  alacritty msg config "$(cat "$theme_file")"
+}
+alacritty_theme
 
 n ()
 {
@@ -64,5 +108,4 @@ bindkey '^e' edit-command-line
 # Load zsh-syntax-highlighting
 source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 export PATH="/opt/homebrew/opt/sqlite/bin:$PATH"
-
-
+export PATH="/Users/filip/.antigravity/antigravity/bin:$PATH"

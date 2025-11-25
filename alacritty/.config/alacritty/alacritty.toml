@@ -1,0 +1,59 @@
+[general]
+ipc_socket = true
+
+[font]
+size = 16
+normal = { family = "Monaspace Xenon NF", style = "Regular" }
+bold = { family = "Monaspace Xenon NF", style = "Bold" }
+italic = { family = "Monaspace Xenon NF", style = "Italic" }
+
+[bell]
+animation = "Linear"
+duration = 120
+color = "#ff0000"
+command = { program = "osascript", args = ["-e", "beep"] }
+
+[terminal]
+osc52 = "OnlyCopy"
+
+[scrolling]
+history = 50000
+multiplier = 3
+
+[mouse]
+hide_when_typing = true
+
+[window]
+decorations = "Buttonless"
+padding = { x = 4, y = 4 }
+startup_mode = "Maximized"
+option_as_alt = "OnlyRight"
+
+# Colors (Everforest Dark)
+
+# Default colors
+[colors.primary]
+background = '#2d353b'
+foreground = '#d3c6aa'
+
+# Normal colors
+[colors.normal]
+black   = '#475258'
+red     = '#e67e80'
+green   = '#a7c080'
+yellow  = '#dbbc7f'
+blue    = '#7fbbb3'
+magenta = '#d699b6'
+cyan    = '#83c092'
+white   = '#d3c6aa'
+
+# Bright colors
+[colors.bright]
+black   = '#475258'
+red     = '#e67e80'
+green   = '#a7c080'
+yellow  = '#dbbc7f'
+blue    = '#7fbbb3'
+magenta = '#d699b6'
+cyan    = '#83c092'
+white   = '#d3c6aa'
