@@ -18,6 +18,7 @@ vim.opt.rtp:prepend(lazypath)
 -- Basic options
 vim.g.mapleader = " "
 
+vim.opt.mouse = ""
 vim.opt.splitright = true
 vim.opt.undofile = true
 vim.opt.number = true
@@ -73,7 +74,7 @@ vim.api.nvim_create_autocmd({ "VimEnter", "FocusGained" }, {
 vim.keymap.set("n", "<Tab>", "<Cmd>bnext<CR>")
 vim.keymap.set("n", "<S-Tab>", "<Cmd>bprevious<CR>")
 vim.keymap.set("n", "<leader>e", "<Cmd>Le<CR>")
-vim.keymap.set("t", "<leader><Esc>", "<C-\\><C-n>")
+vim.keymap.set("t", "<C-s>", "<C-\\><C-n>")
 
 local term_bottom = { height = 12 }
 local function toggle_term_bottom()
@@ -86,7 +87,7 @@ local function toggle_term_bottom()
 	vim.cmd("botright " .. term_bottom.height .. "split")
 	term_bottom.win = vim.api.nvim_get_current_win()
 
-if term_bottom.buf and vim.api.nvim_buf_is_valid(term_bottom.buf) then
+	if term_bottom.buf and vim.api.nvim_buf_is_valid(term_bottom.buf) then
 		vim.api.nvim_win_set_buf(term_bottom.win, term_bottom.buf)
 	else
 		vim.cmd("terminal")
@@ -237,7 +238,6 @@ require("lazy").setup({
 				end,
 			},
 		},
-		{ 'nvim-telescope/telescope.nvim', tag = '0.1.8' },
 		{
 			"nvim-lualine/lualine.nvim",
 			event = "VeryLazy",
@@ -385,7 +385,23 @@ require("lazy").setup({
 					filetypes = { "c", "cpp", "objc", "objcpp", "cuda", "proto" },
 				})
 
-				vim.lsp.enable({ "lua_ls", "basedpyright", "bashls", "gopls", "clangd" })
+				vim.lsp.config("ts_ls", {
+					capabilities = capabilities,
+					on_attach = on_attach,
+					filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact" },
+				})
+
+				vim.lsp.config("html", {
+					capabilities = capabilities,
+					on_attach = on_attach,
+				})
+
+				vim.lsp.config("cssls", {
+					capabilities = capabilities,
+					on_attach = on_attach,
+				})
+
+				vim.lsp.enable({ "lua_ls", "basedpyright", "bashls", "gopls", "clangd", "ts_ls", "html", "cssls" })
 
 				vim.diagnostic.config({ float = { border = "rounded" } })
 			end,

@@ -3,6 +3,15 @@ setopt autocd
 stty stop undef  # Disable ctrl-s to freeze terminal.
 setopt interactive_comments
 
+# history
+HISTSIZE=50000
+SAVEHIST=50000
+setopt inc_append_history
+setopt share_history
+setopt hist_ignore_dups
+# Ignore commands starting with a space
+setopt hist_ignore_space
+
 # autoload -Uz vcs_info
 # precmd() { vcs_info }
 # zstyle ':vcs_info:git:*' formats '%b '
@@ -51,16 +60,20 @@ zle-line-init() {
     echo -ne "\e[5 q"
 }
 zle -N zle-line-init
-echo -ne '\e[5 q' # Use beam shape cursor on startup.
-preexec() { echo -ne '\e[5 q' ;} # Use beam shape cursor for each new prompt.
 
 # fzf bindings and helper
-source <(fzf --zsh)
-ff() {
-  fzf --height 40% --layout reverse \
-      --preview 'head -n $FZF_PREVIEW_LINES {} | cat -n' \
-      --bind 'enter:become(nvim {})'
-}
+if command -v fzf &> /dev/null; then
+	if (( $+functions[zsh-defer] )); then
+		zsh-defer source <(fzf --zsh)
+	else
+		source <(fzf --zsh)
+	fi
+	ff() {
+	  fzf --height 40% --layout reverse \
+		  --preview 'head -n $FZF_PREVIEW_LINES {} | cat -n' \
+		  --bind 'enter:become(nvim {})'
+		}
+fi
 
 alacritty_theme() {
   [[ -z "$ALACRITTY_WINDOW_ID" ]] && return
@@ -107,5 +120,3 @@ bindkey '^e' edit-command-line
 
 # Load zsh-syntax-highlighting
 source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-export PATH="/opt/homebrew/opt/sqlite/bin:$PATH"
-export PATH="/Users/filip/.antigravity/antigravity/bin:$PATH"
