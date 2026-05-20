@@ -17,7 +17,6 @@ vim.opt.rtp:prepend(lazypath)
 
 -- Basic options
 vim.g.mapleader = " "
-
 vim.opt.mouse = ""
 vim.opt.splitright = true
 vim.opt.undofile = true
@@ -26,7 +25,6 @@ vim.opt.relativenumber = true
 vim.opt.cursorline = true
 vim.opt.cursorlineopt = "both"
 vim.opt.signcolumn = "yes"
--- vim.opt.scrolloff = 2
 vim.opt.clipboard = "unnamedplus"
 vim.opt.shiftwidth = 4
 vim.opt.tabstop = 4
@@ -36,7 +34,6 @@ vim.opt.listchars = { trail = "-", nbsp = "+", tab = "  ", extends = ">", preced
 vim.opt.shortmess:append("I")
 vim.opt.updatetime = 500
 vim.g.markdown_fenced_languages = { "html", "css", "javascript", "python", "lua", "go", "bash=sh", "c", "cpp" }
-
 vim.opt.grepprg = "rg --vimgrep"
 vim.opt.grepformat = "%f:%l:%c:%m"
 vim.cmd.packadd("cfilter")
@@ -47,32 +44,32 @@ vim.g.netrw_winsize = 18
 vim.g.netrw_banner = 0
 
 -- Theme
+vim.g.default_colorscheme = "dawnfox"
+
 local function update_background()
-	local color, bg, everforest_bg = "everforest", "dark", "hard"
+	local color = vim.g.default_colorscheme
 	if vim.env.TERMUX_VERSION then
-		color, bg = "quiet", "light"
-	else
-		local status, output = pcall(vim.fn.system, "defaults read -g AppleInterfaceStyle 2>/dev/null")
-		if status and not output:match("Dark") then
-			bg = "light"
-			everforest_bg = "soft"
-		end
+		color = "quiet"
+	elseif vim.fn.has("mac") == 1 then
+		local output = vim.fn.system({ "defaults", "read", "-g", "AppleInterfaceStyle" })
+		local is_dark = vim.v.shell_error == 0 and output:match("Dark")
+		color = is_dark and "carbonfox" or "dawnfox"
+	end
+	if vim.g.colors_name ~= color then
+		pcall(vim.cmd.colorscheme, color)
 	end
 
-	if vim.g.everforest_background ~= everforest_bg then
-		vim.g.everforest_background = everforest_bg
-	end
-	if vim.o.background ~= bg then vim.opt.background = bg end
-	if vim.g.colors_name ~= color then vim.cmd.colorscheme(color) end
 end
 
-vim.api.nvim_create_autocmd({ "VimEnter", "FocusGained" }, {
-	callback = update_background,
+vim.api.nvim_create_autocmd({
+	"FocusGained",
+}, {
+	callback = function()
+		vim.schedule(update_background)
+	end,
 })
 
 -- Keymaps
-vim.keymap.set("n", "<Tab>", "<Cmd>bnext<CR>")
-vim.keymap.set("n", "<S-Tab>", "<Cmd>bprevious<CR>")
 vim.keymap.set("n", "<leader>e", "<Cmd>Le<CR>")
 vim.keymap.set("t", "<C-s>", "<C-\\><C-n>")
 
@@ -158,30 +155,16 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 require("lazy").setup({
 	spec = {
 		{
-			"sainnhe/everforest",
-			priority = 1000,
-			lazy = false,
+			"EdenEast/nightfox.nvim",
 			config = update_background,
 		},
 		{
-			"ggandor/leap.nvim",
+			url = "https://codeberg.org/andyg/leap.nvim",
 			lazy = false,
 			config = function()
-				require("leap").add_default_mappings()
+				vim.keymap.set({ "n", "x", "o" }, "s", "<Plug>(leap)")
+				vim.keymap.set("n", "S", "<Plug>(leap-from-window)")
 			end,
-		},
-		{
-			"akinsho/bufferline.nvim",
-			event = "VeryLazy",
-			dependencies = { "nvim-tree/nvim-web-devicons" },
-			opts = {
-				options = {
-					show_buffer_close_icons = false,
-					show_close_icon = false,
-					diagnostics = "nvim_lsp",
-					separator_style = "thin",
-				},
-			},
 		},
 		{
 			"ibhagwan/fzf-lua",
@@ -189,8 +172,10 @@ require("lazy").setup({
 			opts = {},
 			keys = {
 				{ "<leader>ff", "<cmd>FzfLua files<CR>",     desc = "FzfLua files" },
-				{ "<leader>fs", "<cmd>FzfLua grep<CR>",      desc = "FzfLua grep" },
+				{ "<leader>fs", "<cmd>FzfLua git_status<CR>", desc = "FzfLua git status" },
 				{ "<leader>fg", "<cmd>FzfLua live_grep<CR>", desc = "FzfLua live grep" },
+				{ "<leader>ft", "<cmd>FzfLua grep<CR>",      desc = "FzfLua grep" },
+				{ "<leader>fo", "<cmd>FzfLua lsp_document_symbols<CR>", desc = "FzfLua document symbols" },
 				{ "<leader>fd", "<cmd>FzfLua<CR>",           desc = "FzfLua default" },
 			},
 		},
@@ -259,7 +244,7 @@ require("lazy").setup({
 			config = function()
 				local cmp = require("cmp")
 
-					cmp.setup({
+				cmp.setup({
 					completion = { autocomplete = false, completeopt = "menu,menuone,noselect" },
 					snippet = { expand = function() end },
 					sources = cmp.config.sources({
@@ -297,7 +282,7 @@ require("lazy").setup({
 				cmp.setup.filetype("markdown", { enabled = false })
 			end,
 		},
-		{ "mason-org/mason.nvim",          opts = {} },
+		{ "mason-org/mason.nvim" },
 		{
 			"neovim/nvim-lspconfig",
 			dependencies = { "hrsh7th/cmp-nvim-lsp" },
@@ -313,6 +298,7 @@ require("lazy").setup({
 					keymap("gr", vim.lsp.buf.references, "Go to references")
 					keymap("gD", vim.lsp.buf.declaration, "Go to declaration")
 					keymap("gi", vim.lsp.buf.implementation, "Go to implementation")
+						-- keymap("gt", vim.lsp.buf.type_definition, "Go to type definition")
 					keymap("K", vim.lsp.buf.hover, "Hover")
 					keymap("<leader>rn", vim.lsp.buf.rename, "Rename symbol")
 					keymap("<leader>ca", vim.lsp.buf.code_action, "Code action")
@@ -407,7 +393,7 @@ require("lazy").setup({
 			end,
 		},
 	},
-	install = { colorscheme = { "everforest" } },
+	install = { colorscheme = { vim.g.default_colorscheme } },
 	change_detection = { notify = false },
 	performance = {
 		rtp = {

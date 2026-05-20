@@ -22,6 +22,7 @@ setopt hist_ignore_space
 alias ls='ls --color=auto'
 alias sqlite="/opt/homebrew/opt/sqlite/bin/sqlite3"
 alias ding="afplay /System/Library/Sounds/Glass.aiff"
+alias dl-audio="yt-dlp -f 140 --embed-chapters"
 
 export GPG_TTY=$(tty)
 
