@@ -76,18 +76,6 @@ if command -v fzf &> /dev/null; then
 		}
 fi
 
-alacritty_theme() {
-  [[ -z "$ALACRITTY_WINDOW_ID" ]] && return
-  local base="$HOME/.config/alacritty"
-  if defaults read -g AppleInterfaceStyle 2>/dev/null | grep -qi "Dark"; then
-    theme_file="$base/everforest_dark.toml"
-  else
-    theme_file="$base/everforest_light.toml"
-  fi
-  alacritty msg config "$(cat "$theme_file")"
-}
-alacritty_theme
-
 n ()
 {
     # Block nesting of nnn in subshells

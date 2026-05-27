@@ -43,32 +43,6 @@ vim.g.netrw_keepdir = 0
 vim.g.netrw_winsize = 18
 vim.g.netrw_banner = 0
 
--- Theme
-vim.g.default_colorscheme = "dawnfox"
-
-local function update_background()
-	local color = vim.g.default_colorscheme
-	if vim.env.TERMUX_VERSION then
-		color = "quiet"
-	elseif vim.fn.has("mac") == 1 then
-		local output = vim.fn.system({ "defaults", "read", "-g", "AppleInterfaceStyle" })
-		local is_dark = vim.v.shell_error == 0 and output:match("Dark")
-		color = is_dark and "carbonfox" or "dawnfox"
-	end
-	if vim.g.colors_name ~= color then
-		pcall(vim.cmd.colorscheme, color)
-	end
-
-end
-
-vim.api.nvim_create_autocmd({
-	"FocusGained",
-}, {
-	callback = function()
-		vim.schedule(update_background)
-	end,
-})
-
 -- Keymaps
 vim.keymap.set("n", "<leader>e", "<Cmd>Le<CR>")
 vim.keymap.set("t", "<C-s>", "<C-\\><C-n>")
@@ -155,8 +129,10 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 require("lazy").setup({
 	spec = {
 		{
-			"EdenEast/nightfox.nvim",
-			config = update_background,
+			"Mofiqul/dracula.nvim",
+			config = function()
+				vim.cmd.colorscheme("dracula")
+			end,
 		},
 		{
 			url = "https://codeberg.org/andyg/leap.nvim",
@@ -393,7 +369,7 @@ require("lazy").setup({
 			end,
 		},
 	},
-	install = { colorscheme = { vim.g.default_colorscheme } },
+	install = { colorscheme = { "dracula" } },
 	change_detection = { notify = false },
 	performance = {
 		rtp = {

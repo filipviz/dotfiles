@@ -1,8 +1,9 @@
 #:schema https://developers.openai.com/codex/config-schema.json
 
 model = "gpt-5.5"
-model_reasoning_effort = "medium"
+model_reasoning_effort = "xhigh"
 personality = "pragmatic"
+web_search = "live"
 
 approval_policy = "on-request"
 approvals_reviewer = "auto_review"
@@ -17,30 +18,28 @@ plan_mode_reasoning_effort = "xhigh"
 notify = ["/Users/filip/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
 
 [sandbox_workspace_write]
+network_access = true
 writable_roots = ["/Users/filip/.cache", "/Users/filip/.matplotlib"]
 
 [features]
-shell_snapshot = true
-apps = true
-voice_transcription = true
 memories = true
-remote_connections = true
-terminal_resize_reflow = true
-goals = true
 prevent_idle_sleep = true
 mentions_v2 = true
-hooks = true
 
 [tui]
 status_line = ["model-with-reasoning", "current-dir", "context-usage", "context-window-size", "five-hour-limit", "weekly-limit"]
 theme = "ansi"
 notifications = true
 notification_condition = "always"
+notification_method = "osc9"
 
 [tui.model_availability_nux]
 "gpt-5.5" = 4
 
 [projects."/Users/filip"]
+trust_level = "trusted"
+
+[projects."/Users/filip/Developer/dotfiles"]
 trust_level = "trusted"
 
 [plugins."github@openai-curated"]
@@ -65,12 +64,10 @@ enabled = true
 enabled = true
 
 [marketplaces.openai-bundled]
-last_updated = "2026-05-20T14:19:49Z"
 source_type = "local"
 source = "/Users/filip/.codex/.tmp/bundled-marketplaces/openai-bundled"
 
 [marketplaces.openai-primary-runtime]
-last_updated = "2026-05-19T15:00:55Z"
 source_type = "local"
 source = "/Users/filip/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
 
@@ -88,3 +85,83 @@ enabled = false
 [[skills.config]]
 path = "/Users/filip/.codex/skills/playwright/SKILL.md"
 enabled = false
+
+[desktop]
+appearanceTheme = "system"
+appearanceLightCodeThemeId = "codex"
+appearanceDarkCodeThemeId = "codex"
+sansFontSize = 18
+codeFontSize = 16
+usePointerCursors = false
+mac-menu-bar-enabled = false
+followUpQueueMode = "steer"
+composerEnterBehavior = "enter"
+localeOverride = "en-US"
+preventSleepWhileRunning = true
+keepRemoteControlAwakeWhilePluggedIn = true
+
+[desktop.appearanceLightChromeTheme]
+accent = "#6f5f3e"
+contrast = 45
+ink = "#2d2a26"
+opaqueWindows = false
+surface = "#fbfaf6"
+
+[desktop.appearanceLightChromeTheme.fonts]
+code = '"Berkeley Mono"'
+ui = '"XCharter"'
+
+[desktop.appearanceLightChromeTheme.semanticColors]
+diffAdded = "#4f5d55"
+diffRemoved = "#8f5f2d"
+skill = "#6f5f3e"
+
+[desktop.appearanceDarkChromeTheme]
+accent = "#d0a85c"
+contrast = 45
+ink = "#ded8cd"
+opaqueWindows = false
+surface = "#1d1d1b"
+
+[desktop.appearanceDarkChromeTheme.fonts]
+code = '"Berkeley Mono"'
+ui = '"XCharter"'
+
+[desktop.appearanceDarkChromeTheme.semanticColors]
+diffAdded = "#a9b58e"
+diffRemoved = "#c94f6d"
+skill = "#d0a85c"
+
+[desktop.open-in-target-preferences]
+global = "ghostty"
+
+[mcp_servers.node_repl]
+args = []
+command = "/Applications/Codex.app/Contents/Resources/node_repl"
+startup_timeout_sec = 120
+
+[mcp_servers.node_repl.env]
+NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS = "1000"
+NODE_REPL_NODE_MODULE_DIRS = ""
+NODE_REPL_NODE_PATH = "/Applications/Codex.app/Contents/Resources/node"
+NODE_REPL_TRUSTED_CODE_PATHS = "/Users/filip/.codex"
+CODEX_HOME = "/Users/filip/.codex"
+NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "496c7b3cb95b4bc20cff49b513150606e0da0000c92bf752206bee5a6c248423"
+BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
+BROWSER_USE_MARKETPLACE_NAME = "openai-bundled"
+NODE_REPL_UNTRUSTED_ENV_ALLOWLIST = "BROWSER_USE_MARKETPLACE_NAME"
+SKY_CUA_SERVICE_PATH = "/Users/filip/.codex/.tmp/bundled-marketplaces/openai-bundled/plugins/computer-use/Codex Computer Use.app"
+CODEX_CLI_PATH = "/Applications/Codex.app/Contents/Resources/codex"
+
+# cmux-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 begin
+[hooks.state."/Users/filip/.codex/hooks.json:pre_tool_use:0:0"]
+trusted_hash = "sha256:42e7f4894f995941c4a69724b3c3450149186ab3d3e4f72b369449007264f69c"
+[hooks.state."/Users/filip/.codex/hooks.json:permission_request:0:0"]
+trusted_hash = "sha256:d41dda7f6fa2cb9c9eaecf7913396d8caf411a4c3a762512cd781a444a33627d"
+[hooks.state."/Users/filip/.codex/hooks.json:session_start:0:0"]
+trusted_hash = "sha256:cf1a0d4509a5a61c0bf5508504812f12cdc8865b4c2c227cab83b9c416930dcc"
+[hooks.state."/Users/filip/.codex/hooks.json:user_prompt_submit:0:0"]
+trusted_hash = "sha256:dac91f409888af4494318e15f200cac217d7259d2daaadd3a5c94ceb909224a2"
+[hooks.state."/Users/filip/.codex/hooks.json:stop:0:0"]
+trusted_hash = "sha256:ae07c3513f9e11fd3b7ea93d8b924dfa9726b44e97b425fa9cfbbd22727f8e0b"
+# cmux-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 end
