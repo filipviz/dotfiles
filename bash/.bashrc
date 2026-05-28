@@ -8,6 +8,11 @@ export VISUAL="nvim"
 export PAGER="less"
 export PATH="$HOME/.scripts:$HOME/.local/bin:$PATH"
 
+set -o vi
+
+alias ls='ls --color=auto'
+alias lg="lazygit"
+
 if command -v fzf >/dev/null 2>&1; then
   if fzf --bash >/dev/null 2>&1; then
     eval "$(fzf --bash)"

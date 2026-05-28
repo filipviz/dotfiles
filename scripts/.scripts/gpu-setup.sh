@@ -18,7 +18,8 @@ REPO_SSH="git@github-trustworthy-gradients:filipviz/trustworthy-gradients.git"
 DEPLOY_KEY_DEST="$HOME/.ssh/trustworthy-gradients"
 DOTFILES_DIR="$HOME/Developer/dotfiles"
 DOTFILES_REPO="https://github.com/filipviz/dotfiles.git"
-DOTFILES_ARCHIVE="/tmp/dotfiles.tar.gz"
+DOTFILES_ARCHIVE="${DOTFILES_ARCHIVE:-/tmp/dotfiles.tar.gz}"
+REMOTE_DEPLOY_KEY="${REMOTE_DEPLOY_KEY:-/tmp/trustworthy-gradients.deploy-key}"
 
 log() {
   printf '[gpu-setup] %s\n' "$*"
@@ -27,6 +28,13 @@ log() {
 die() {
   printf '[gpu-setup] error: %s\n' "$*" >&2
   exit 1
+}
+
+require_command() {
+  local cmd
+  for cmd in "$@"; do
+    command -v "$cmd" >/dev/null 2>&1 || die "missing required command: $cmd"
+  done
 }
 
 sudo_cmd() {
@@ -51,6 +59,7 @@ install_packages() {
     fd-find \
     fzf \
     git \
+    lazygit \
     less \
     neovim \
     nnn \
@@ -109,24 +118,16 @@ install_codex() {
 }
 
 setup_deploy_key() {
-  local src=""
-
-  if [ -s /tmp/trustworthy-gradients.deploy-key ]; then
-    src="/tmp/trustworthy-gradients.deploy-key"
-  elif [ -s /tmp/trustworthy-gradients ]; then
-    src="/tmp/trustworthy-gradients"
-  elif [ -s "$DEPLOY_KEY_DEST" ]; then
-    chmod 600 "$DEPLOY_KEY_DEST"
-  else
-    die "missing deploy key; copy it to /tmp/trustworthy-gradients.deploy-key"
-  fi
-
   mkdir -p "$HOME/.ssh"
   chmod 700 "$HOME/.ssh"
 
-  if [ -n "$src" ]; then
-    install -m 600 "$src" "$DEPLOY_KEY_DEST"
-    rm -f "$src"
+  if [ -s "$REMOTE_DEPLOY_KEY" ]; then
+    install -m 600 "$REMOTE_DEPLOY_KEY" "$DEPLOY_KEY_DEST"
+    rm -f "$REMOTE_DEPLOY_KEY"
+  elif [ -s "$DEPLOY_KEY_DEST" ]; then
+    chmod 600 "$DEPLOY_KEY_DEST"
+  else
+    die "missing deploy key; copy it to $REMOTE_DEPLOY_KEY"
   fi
 
   touch "$HOME/.ssh/config"
@@ -176,28 +177,18 @@ install_dotfiles_repo() {
 }
 
 link_config() {
-  local src="$1"
-  local dest="$2"
-
-  if [ ! -e "$src" ]; then
-    die "missing dotfiles path: $src"
-  fi
-
-  mkdir -p "$(dirname "$dest")"
-
-  if [ -L "$dest" ]; then
-    ln -sfn "$src" "$dest"
-  elif [ -e "$dest" ]; then
-    log "$dest already exists; leaving it unchanged."
-  else
-    ln -s "$src" "$dest"
-  fi
-}
-
-link_config_replace() {
-  local src="$1"
-  local dest="$2"
+  local mode="$1"
+  local src="$2"
+  local dest="$3"
   local backup="${dest}.before-gpu-setup"
+
+  case "$mode" in
+    keep|replace)
+      ;;
+    *)
+      die "unknown link mode: $mode"
+      ;;
+  esac
 
   if [ ! -e "$src" ]; then
     die "missing dotfiles path: $src"
@@ -211,6 +202,11 @@ link_config_replace() {
   fi
 
   if [ -e "$dest" ]; then
+    if [ "$mode" = keep ]; then
+      log "$dest already exists; leaving it unchanged."
+      return
+    fi
+
     if [ -e "$backup" ]; then
       die "$dest exists and $backup already exists; inspect before replacing"
     fi
@@ -223,25 +219,16 @@ link_config_replace() {
 
 link_dotfiles() {
   log "Linking portable dotfiles..."
-  link_config "$DOTFILES_DIR/scripts/.scripts" "$HOME/.scripts"
-  link_config_replace "$DOTFILES_DIR/bash/.bashrc" "$HOME/.bashrc"
-  link_config "$DOTFILES_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf"
-  link_config "$DOTFILES_DIR/nvim/.config/nvim" "$HOME/.config/nvim"
-  link_config "$DOTFILES_DIR/codex/.codex/AGENTS.md" "$HOME/.codex/AGENTS.md"
+  link_config keep "$DOTFILES_DIR/scripts/.scripts" "$HOME/.scripts"
+  link_config replace "$DOTFILES_DIR/bash/.bashrc" "$HOME/.bashrc"
+  link_config keep "$DOTFILES_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf"
+  link_config keep "$DOTFILES_DIR/nvim/.config/nvim" "$HOME/.config/nvim"
+  link_config keep "$DOTFILES_DIR/codex/.codex/AGENTS.md" "$HOME/.codex/AGENTS.md"
 }
 
 verify_setup() {
   log "Verifying setup..."
-  command -v tmux >/dev/null
-  command -v git >/dev/null
-  command -v nvim >/dev/null
-  command -v rg >/dev/null
-  command -v fd >/dev/null
-  command -v curl >/dev/null
-  command -v nnn >/dev/null
-  command -v fzf >/dev/null
-  command -v uv >/dev/null
-  command -v codex >/dev/null
+  require_command tmux git lazygit nvim rg fd curl nnn fzf uv codex
   test -d "$DOTFILES_DIR/.git"
   test -d "$HOME/.scripts"
   test -x "$HOME/.scripts/gpu-setup.sh"

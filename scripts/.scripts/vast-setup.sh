@@ -21,6 +21,7 @@ SSH_KEY="$HOME/.ssh/codex-key"
 DEPLOY_KEY="$HOME/.ssh/trustworthy-gradients"
 REMOTE_DEPLOY_KEY="/tmp/trustworthy-gradients.deploy-key"
 REMOTE_DOTFILES_ARCHIVE="/tmp/dotfiles.tar.gz"
+REMOTE_GPU_SETUP="/tmp/gpu-setup.sh"
 
 log() {
   printf '[vast-setup] %s\n' "$*" >&2
@@ -32,17 +33,14 @@ die() {
 }
 
 require_command() {
-  command -v "$1" >/dev/null 2>&1 || die "missing required command: $1"
+  local cmd
+  for cmd in "$@"; do
+    command -v "$cmd" >/dev/null 2>&1 || die "missing required command: $cmd"
+  done
 }
 
 check_prereqs() {
-  require_command vastai
-  require_command jq
-  require_command ssh
-  require_command scp
-  require_command ssh-add
-  require_command ssh-keygen
-  require_command tar
+  require_command vastai jq ssh scp ssh-add ssh-keygen tar
 
   [ -x "$GPU_SETUP" ] || die "missing executable GPU setup script: $GPU_SETUP"
   [ -d "$DOTFILES_DIR/.git" ] || die "dotfiles repo not found at $DOTFILES_DIR"
@@ -60,25 +58,18 @@ ensure_codex_key_loaded() {
   fi
 
   if [ -t 0 ]; then
-    printf '%s is not loaded in ssh-agent. Run ssh-add now? [Y/n] ' "$SSH_KEY" >&2
     local answer
+    printf '%s is not loaded in ssh-agent. Run ssh-add now? [Y/n] ' "$SSH_KEY" >&2
     read -r answer
     case "$answer" in
       ""|y|Y|yes|YES)
         ssh-add "$SSH_KEY"
-        ;;
-      *)
-        die "$SSH_KEY is not loaded"
+        return
         ;;
     esac
-  else
-    die "$SSH_KEY is not loaded in ssh-agent"
   fi
-}
 
-instance_by_id() {
-  vastai show instance "$1" --raw |
-    jq -c 'if type == "array" then .[0] else . end'
+  die "$SSH_KEY is not loaded in ssh-agent"
 }
 
 running_instances() {
@@ -106,7 +97,8 @@ describe_instance() {
 
 choose_instance() {
   if [ "$#" -eq 1 ]; then
-    instance_by_id "$1"
+    vastai show instance "$1" --raw |
+      jq -c 'if type == "array" then .[0] else . end'
     return
   elif [ "$#" -gt 1 ]; then
     die "usage: vast-setup.sh [INSTANCE_ID]"
@@ -142,7 +134,7 @@ choose_instance() {
           ;;
       esac
       if [ "$choice" -lt 1 ] || [ "$choice" -gt "${#instances[@]}" ]; then
-        die "choice out of range: $choice"
+        die "invalid choice: $choice"
       fi
       printf '%s\n' "${instances[$((choice - 1))]}"
       ;;
@@ -209,17 +201,18 @@ wait_for_ssh() {
 
 run_remote_setup() {
   log "Uploading deploy key, dotfiles, and GPU setup script..."
-  local archive
-  archive="$(mktemp -t dotfiles.XXXXXX.tar.gz)"
+  local stage
+  stage="$(mktemp -d -t vast-setup.XXXXXX)"
+  trap 'rm -rf "$stage"' RETURN
 
-  tar -czf "$archive" -C "$(dirname "$DOTFILES_DIR")" "$(basename "$DOTFILES_DIR")"
-  scp "$DEPLOY_KEY" "$HOST_ALIAS:$REMOTE_DEPLOY_KEY"
-  scp "$archive" "$HOST_ALIAS:$REMOTE_DOTFILES_ARCHIVE"
-  scp "$GPU_SETUP" "$HOST_ALIAS:/tmp/gpu-setup.sh"
-  rm -f "$archive"
+  tar -czf "$stage/$(basename "$REMOTE_DOTFILES_ARCHIVE")" -C "$(dirname "$DOTFILES_DIR")" "$(basename "$DOTFILES_DIR")"
+  cp "$DEPLOY_KEY" "$stage/$(basename "$REMOTE_DEPLOY_KEY")"
+  cp "$GPU_SETUP" "$stage/$(basename "$REMOTE_GPU_SETUP")"
+  scp "$stage/"* "$HOST_ALIAS:/tmp/"
 
   log "Running remote setup..."
-  ssh -T "$HOST_ALIAS" 'bash /tmp/gpu-setup.sh'
+  ssh -T "$HOST_ALIAS" \
+    "REMOTE_DEPLOY_KEY='$REMOTE_DEPLOY_KEY' DOTFILES_ARCHIVE='$REMOTE_DOTFILES_ARCHIVE' bash '$REMOTE_GPU_SETUP'"
 }
 
 install_ghostty_terminfo() {
