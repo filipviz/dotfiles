@@ -52,14 +52,35 @@ trust_level = "trusted"
 [projects."/Users/filip/Documents/Codex/2026-05-28/an-addendum-to-bostrom-s-simulation"]
 trust_level = "trusted"
 
-[plugins."documents@openai-primary-runtime"]
-enabled = false
+[projects."/Users/filip/Documents/Codex/2026-05-28/someone-shared-this-lee-sedol-quote"]
+trust_level = "trusted"
 
-[plugins."spreadsheets@openai-primary-runtime"]
-enabled = false
+[projects."/Users/filip/Documents/Codex/2026-05-29/i-just-upgraded-the-codex-gui"]
+trust_level = "trusted"
 
-[plugins."presentations@openai-primary-runtime"]
-enabled = false
+[projects."/Users/filip/Documents/Codex/2026-05-29/what-mosh-command-do-i-need"]
+trust_level = "trusted"
+
+[projects."/Users/filip/Documents/Codex/2026-05-29/why-do-most-cloud-providers-have"]
+trust_level = "trusted"
+
+[projects."/Users/filip/Documents/Codex/2026-05-29/what-does-set-g-allow-passthrough"]
+trust_level = "trusted"
+
+[projects."/Users/filip/Documents/Codex/2026-05-29/what-s-the-easiest-way-to"]
+trust_level = "trusted"
+
+[projects."/Users/filip/Documents/Codex/projects/reports"]
+trust_level = "trusted"
+
+[projects."/Users/filip/Documents/Codex/2026-05-30/how-do-people-rate-the-experience"]
+trust_level = "trusted"
+
+[projects."/Users/filip/Documents/Codex/2026-05-30/is-the-saint-petersburg-paradox-even"]
+trust_level = "trusted"
+
+[projects."/Users/filip/Documents/Codex/2026-05-30/if-someone-says-they-work-in"]
+trust_level = "trusted"
 
 [plugins."browser@openai-bundled"]
 enabled = true
@@ -68,7 +89,7 @@ enabled = true
 enabled = true
 
 [marketplaces.openai-bundled]
-last_updated = "2026-05-28T18:43:48Z"
+last_updated = "2026-05-30T14:51:55Z"
 source_type = "local"
 source = "/Users/filip/.codex/.tmp/bundled-marketplaces/openai-bundled"
 
@@ -139,23 +160,6 @@ skill = "#d0a85c"
 
 [desktop.open-in-target-preferences]
 global = "ghostty"
-
-[mcp_servers.node_repl]
-args = []
-command = "/Applications/Codex.app/Contents/Resources/node_repl"
-startup_timeout_sec = 120
-
-[mcp_servers.node_repl.env]
-NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS = "1000"
-NODE_REPL_NODE_MODULE_DIRS = ""
-NODE_REPL_NODE_PATH = "/Applications/Codex.app/Contents/Resources/node"
-NODE_REPL_TRUSTED_CODE_PATHS = "/Users/filip/.codex"
-CODEX_HOME = "/Users/filip/.codex"
-NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "496c7b3cb95b4bc20cff49b513150606e0da0000c92bf752206bee5a6c248423"
-BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
-BROWSER_USE_MARKETPLACE_NAME = "openai-bundled"
-NODE_REPL_UNTRUSTED_ENV_ALLOWLIST = "BROWSER_USE_MARKETPLACE_NAME"
-CODEX_CLI_PATH = "/Applications/Codex.app/Contents/Resources/codex"
 
 # cmux-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 begin
 [hooks.state."/Users/filip/.codex/hooks.json:pre_tool_use:0:0"]

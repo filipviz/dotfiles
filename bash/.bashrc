@@ -1,7 +1,4 @@
-if [ -n "${DOTFILES_BASHRC_LOADED:-}" ]; then
-  return 0 2>/dev/null || exit 0
-fi
-export DOTFILES_BASHRC_LOADED=1
+# Used on remote hosts
 
 export EDITOR="nvim"
 export VISUAL="nvim"
@@ -12,6 +9,16 @@ set -o vi
 
 alias ls='ls --color=auto'
 alias lg="lazygit"
+
+clip() {
+  if [ -n "${TMUX:-}" ] && command -v tmux >/dev/null 2>&1; then
+    tmux load-buffer -w -
+  else
+    printf '\033]52;c;'
+    base64 | tr -d '\n'
+    printf '\a'
+  fi
+}
 
 if command -v fzf >/dev/null 2>&1; then
   if fzf --bash >/dev/null 2>&1; then

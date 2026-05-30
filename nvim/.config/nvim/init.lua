@@ -17,6 +17,9 @@ vim.opt.rtp:prepend(lazypath)
 
 -- Basic options
 vim.g.mapleader = " "
+if vim.env.SSH_CONNECTION then
+	vim.g.clipboard = "osc52"
+end
 vim.opt.mouse = ""
 vim.opt.splitright = true
 vim.opt.undofile = true
