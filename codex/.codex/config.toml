@@ -49,37 +49,7 @@ trust_level = "trusted"
 [projects."/Users/filip/Documents/Codex/projects/palma"]
 trust_level = "trusted"
 
-[projects."/Users/filip/Documents/Codex/2026-05-28/an-addendum-to-bostrom-s-simulation"]
-trust_level = "trusted"
-
-[projects."/Users/filip/Documents/Codex/2026-05-28/someone-shared-this-lee-sedol-quote"]
-trust_level = "trusted"
-
-[projects."/Users/filip/Documents/Codex/2026-05-29/i-just-upgraded-the-codex-gui"]
-trust_level = "trusted"
-
-[projects."/Users/filip/Documents/Codex/2026-05-29/what-mosh-command-do-i-need"]
-trust_level = "trusted"
-
-[projects."/Users/filip/Documents/Codex/2026-05-29/why-do-most-cloud-providers-have"]
-trust_level = "trusted"
-
-[projects."/Users/filip/Documents/Codex/2026-05-29/what-does-set-g-allow-passthrough"]
-trust_level = "trusted"
-
-[projects."/Users/filip/Documents/Codex/2026-05-29/what-s-the-easiest-way-to"]
-trust_level = "trusted"
-
 [projects."/Users/filip/Documents/Codex/projects/reports"]
-trust_level = "trusted"
-
-[projects."/Users/filip/Documents/Codex/2026-05-30/how-do-people-rate-the-experience"]
-trust_level = "trusted"
-
-[projects."/Users/filip/Documents/Codex/2026-05-30/is-the-saint-petersburg-paradox-even"]
-trust_level = "trusted"
-
-[projects."/Users/filip/Documents/Codex/2026-05-30/if-someone-says-they-work-in"]
 trust_level = "trusted"
 
 [plugins."browser@openai-bundled"]
