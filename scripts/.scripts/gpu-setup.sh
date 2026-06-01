@@ -197,7 +197,7 @@ install_uv() {
   fi
 
   log "Installing uv..."
-  curl -LsSf https://astral.sh/uv/install.sh | sh
+  curl -LsSf https://astral.sh/uv/install.sh | env UV_UNMANAGED_INSTALL="$HOME/.local/bin" sh
   export PATH="$HOME/.local/bin:$PATH"
 
   if [ -x "$HOME/.local/bin/uv" ]; then

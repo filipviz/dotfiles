@@ -304,6 +304,43 @@ prime_candidates() {
   done
 }
 
+is_valid_candidate() {
+  jq -e '
+    type == "object"
+    and ((.provider // "") | tostring | length > 0)
+    and ((.id // "") | tostring | length > 0)
+    and ((.host // "") | tostring | length > 0)
+    and ((.port // "") | tostring | length > 0)
+  ' >/dev/null 2>&1
+}
+
+capture_candidates() {
+  local provider="$1"
+  local discover="$2"
+  local stderr_file output row
+
+  stderr_file="$(mktemp -t gpu-provision.XXXXXX)"
+  if output="$("$discover" 2>"$stderr_file")"; then
+    while IFS= read -r row; do
+      [ -n "$row" ] || continue
+      if printf '%s\n' "$row" | is_valid_candidate; then
+        printf '%s\n' "$row"
+      else
+        log "Ignoring non-candidate output from $provider discovery: $row"
+      fi
+    done <<<"$output"
+  else
+    log "$provider discovery failed:"
+    while IFS= read -r row; do
+      [ -n "$row" ] && log "$row"
+    done <<<"$output"
+    while IFS= read -r row; do
+      [ -n "$row" ] && log "$row"
+    done <"$stderr_file"
+  fi
+  rm -f "$stderr_file"
+}
+
 describe_candidate() {
   jq -r '[
     "provider=" + (.provider // "unknown"),
@@ -356,37 +393,28 @@ select_candidate() {
   local output row
 
   if command -v vastai >/dev/null 2>&1; then
-    if output="$(vast_candidates 2>&1)"; then
-      while IFS= read -r row; do
-        [ -n "$row" ] && candidates+=("$row")
-      done <<<"$output"
-    else
-      log "Vast discovery failed: $output"
-    fi
+    output="$(capture_candidates "Vast" vast_candidates)"
+    while IFS= read -r row; do
+      [ -n "$row" ] && candidates+=("$row")
+    done <<<"$output"
   else
     log "Skipping Vast discovery: vastai not found"
   fi
 
   if command -v runpodctl >/dev/null 2>&1; then
-    if output="$(runpod_candidates 2>&1)"; then
-      while IFS= read -r row; do
-        [ -n "$row" ] && candidates+=("$row")
-      done <<<"$output"
-    else
-      log "RunPod discovery failed: $output"
-    fi
+    output="$(capture_candidates "RunPod" runpod_candidates)"
+    while IFS= read -r row; do
+      [ -n "$row" ] && candidates+=("$row")
+    done <<<"$output"
   else
     log "Skipping RunPod discovery: runpodctl not found"
   fi
 
   if command -v prime >/dev/null 2>&1; then
-    if output="$(prime_candidates 2>&1)"; then
-      while IFS= read -r row; do
-        [ -n "$row" ] && candidates+=("$row")
-      done <<<"$output"
-    else
-      log "Prime discovery failed: $output"
-    fi
+    output="$(capture_candidates "Prime" prime_candidates)"
+    while IFS= read -r row; do
+      [ -n "$row" ] && candidates+=("$row")
+    done <<<"$output"
   else
     log "Skipping Prime discovery: prime not found"
   fi

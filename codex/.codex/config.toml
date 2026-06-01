@@ -52,18 +52,31 @@ trust_level = "trusted"
 [projects."/Users/filip/Documents/Codex/projects/reports"]
 trust_level = "trusted"
 
+[projects."/Users/filip/Developer/modded-nanogpt"]
+trust_level = "trusted"
+
 [plugins."browser@openai-bundled"]
 enabled = true
 
 [plugins."chrome@openai-bundled"]
 enabled = true
 
+[plugins."documents@openai-primary-runtime"]
+enabled = true
+
+[plugins."spreadsheets@openai-primary-runtime"]
+enabled = true
+
+[plugins."presentations@openai-primary-runtime"]
+enabled = true
+
 [marketplaces.openai-bundled]
-last_updated = "2026-05-30T14:51:55Z"
+last_updated = "2026-06-01T18:06:56Z"
 source_type = "local"
 source = "/Users/filip/.codex/.tmp/bundled-marketplaces/openai-bundled"
 
 [marketplaces.openai-primary-runtime]
+last_updated = "2026-06-01T19:01:08Z"
 source_type = "local"
 source = "/Users/filip/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
 
@@ -142,4 +155,22 @@ trusted_hash = "sha256:cf1a0d4509a5a61c0bf5508504812f12cdc8865b4c2c227cab83b9c41
 trusted_hash = "sha256:dac91f409888af4494318e15f200cac217d7259d2daaadd3a5c94ceb909224a2"
 [hooks.state."/Users/filip/.codex/hooks.json:stop:0:0"]
 trusted_hash = "sha256:ae07c3513f9e11fd3b7ea93d8b924dfa9726b44e97b425fa9cfbbd22727f8e0b"
+
+[mcp_servers.node_repl]
+args = []
+command = "/Applications/Codex.app/Contents/Resources/node_repl"
+startup_timeout_sec = 120
+
+[mcp_servers.node_repl.env]
+NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS = "1000"
+NODE_REPL_NODE_MODULE_DIRS = ""
+NODE_REPL_NODE_PATH = "/Applications/Codex.app/Contents/Resources/node"
+NODE_REPL_TRUSTED_CODE_PATHS = "/Users/filip/.codex"
+CODEX_HOME = "/Users/filip/.codex"
+NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "0b0d41e7a14a4903d2f95b0b3f427ed796b12c8edca2fa392a03df43997075ae"
+BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
+NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER = "Control the in-app browser in conjunction with the Browser Plugin."
+NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME = "Control the Chrome browser in conjunction with the Chrome Plugin. Prefer this method of controlling Chrome over alternatives (such as Computer Use) unless the user explicitly mentions an alternative."
+BROWSER_USE_CODEX_APP_BUILD_FLAVOR = "prod"
+CODEX_CLI_PATH = "/Applications/Codex.app/Contents/Resources/codex"
 # cmux-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 end

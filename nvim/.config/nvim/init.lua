@@ -132,9 +132,15 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 require("lazy").setup({
 	spec = {
 		{
-			"Mofiqul/dracula.nvim",
+			"rose-pine/neovim",
+			name = "rose-pine",
+			priority = 1000,
 			config = function()
-				vim.cmd.colorscheme("dracula")
+				require("rose-pine").setup({
+					styles = { italic = false },
+					palette = { moon = { base = "#000000" } },
+				})
+				vim.cmd.colorscheme("rose-pine-moon")
 			end,
 		},
 		{
@@ -151,6 +157,7 @@ require("lazy").setup({
 			opts = {},
 			keys = {
 				{ "<leader>ff", "<cmd>FzfLua files<CR>",     desc = "FzfLua files" },
+				{ "<leader>fb", "<cmd>FzfLua blines<CR>",    desc = "FzfLua buffer lines" },
 				{ "<leader>fs", "<cmd>FzfLua git_status<CR>", desc = "FzfLua git status" },
 				{ "<leader>fg", "<cmd>FzfLua live_grep<CR>", desc = "FzfLua live grep" },
 				{ "<leader>ft", "<cmd>FzfLua grep<CR>",      desc = "FzfLua grep" },
@@ -372,7 +379,7 @@ require("lazy").setup({
 			end,
 		},
 	},
-	install = { colorscheme = { "dracula" } },
+	install = { colorscheme = { "rose-pine" } },
 	change_detection = { notify = false },
 	performance = {
 		rtp = {
