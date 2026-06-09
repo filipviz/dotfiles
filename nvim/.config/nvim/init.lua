@@ -22,12 +22,15 @@ if vim.env.SSH_CONNECTION then
 end
 vim.opt.mouse = ""
 vim.opt.splitright = true
+vim.opt.ignorecase = true
+vim.opt.smartcase = true
 vim.opt.undofile = true
 vim.opt.number = true
 vim.opt.relativenumber = true
 vim.opt.cursorline = true
 vim.opt.cursorlineopt = "both"
 vim.opt.signcolumn = "yes"
+vim.opt.completeopt = "menu,menuone,noselect,popup,fuzzy"
 vim.opt.clipboard = "unnamedplus"
 vim.opt.shiftwidth = 4
 vim.opt.tabstop = 4
@@ -46,6 +49,7 @@ vim.env.COLORTERM = "truecolor"
 vim.g.markdown_fenced_languages = { "html", "css", "javascript", "python", "lua", "go", "bash=sh", "c", "cpp" }
 vim.opt.grepprg = "rg --vimgrep"
 vim.opt.grepformat = "%f:%l:%c:%m"
+vim.opt.diffopt:append("linematch:60")
 vim.cmd.packadd("cfilter")
 
 -- netrw
@@ -104,11 +108,42 @@ vim.api.nvim_create_autocmd("CmdlineEnter", {
 
 -- View diagnostics
 vim.keymap.set("n", "gl", function()
-	local win = vim.diagnostic.open_float()
+	local _, win = vim.diagnostic.open_float()
 	if win and vim.api.nvim_win_is_valid(win) then
 		vim.api.nvim_set_current_win(win)
 	end
 end, { desc = "Show line diagnostics" })
+
+-- LSP: rely on the default keymaps (:h lsp-defaults) — grn rename, gra code
+-- action, grr references, gri implementation, grt type definition, gO symbols,
+-- K hover, CTRL-]/CTRL-T definition via tagfunc, <C-s> signature help (insert)
+vim.api.nvim_create_autocmd("LspAttach", {
+	group = vim.api.nvim_create_augroup("lsp-attach", { clear = true }),
+	callback = function(args)
+		vim.keymap.set("n", "<leader>ih", function()
+			vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = args.buf }), { bufnr = args.buf })
+		end, { buffer = args.buf, desc = "Toggle inlay hints" })
+
+		vim.lsp.inlay_hint.enable(true, { bufnr = args.buf })
+
+		local client = vim.lsp.get_client_by_id(args.data.client_id)
+		if client and client:supports_method("textDocument/completion") then
+			vim.lsp.completion.enable(true, args.data.client_id, args.buf, { autotrigger = false })
+		end
+	end,
+})
+
+-- Native LSP completion: manual trigger, fuzzy matching, docs in a popup
+vim.keymap.set("i", "<C-Space>", vim.lsp.completion.get, { desc = "Trigger completion" })
+vim.keymap.set("i", "<Tab>", function()
+	return vim.fn.pumvisible() == 1 and "<C-n>" or "<Tab>"
+end, { expr = true })
+vim.keymap.set("i", "<S-Tab>", function()
+	return vim.fn.pumvisible() == 1 and "<C-p>" or "<S-Tab>"
+end, { expr = true })
+vim.keymap.set("i", "<CR>", function()
+	return vim.fn.pumvisible() == 1 and "<C-y>" or "<CR>"
+end, { expr = true })
 
 -- Command for writing docs/prose with a specific max line length.
 vim.api.nvim_create_user_command("ProseSettings", function(opts)
@@ -117,8 +152,9 @@ vim.api.nvim_create_user_command("ProseSettings", function(opts)
 	vim.opt_local.colorcolumn = tostring(width)
 end, { nargs = "?", desc = "Set prose-friendly wrapping (default 80)" })
 
--- Set up treesitter
-vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile" }, {
+-- Set up treesitter (FileType rather than BufReadPost: start() infers the
+-- language from the filetype, which isn't detected yet at BufReadPost time)
+vim.api.nvim_create_autocmd("FileType", {
 	callback = function(args)
 		if vim.bo[args.buf].buftype == "" then
 			pcall(vim.treesitter.start, args.buf)
@@ -131,7 +167,7 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 	desc = "Briefly highlight yanked text",
 	group = vim.api.nvim_create_augroup("highlight-yank", { clear = true }),
 	callback = function()
-		vim.highlight.on_yank({ higroup = "IncSearch", timeout = 140 })
+		vim.hl.on_yank({ higroup = "IncSearch", timeout = 140 })
 	end,
 })
 
@@ -186,22 +222,22 @@ require("lazy").setup({
 					end
 
 					-- stylua: ignore start
-					map("n", "]h", function()
+					map("n", "]c", function()
 						if vim.wo.diff then
 							vim.cmd.normal({ "]c", bang = true })
 						else
 							gs.nav_hunk("next")
 						end
 					end, "Next Hunk")
-					map("n", "[h", function()
+					map("n", "[c", function()
 						if vim.wo.diff then
 							vim.cmd.normal({ "[c", bang = true })
 						else
 							gs.nav_hunk("prev")
 						end
 					end, "Prev Hunk")
-					map("n", "]H", function() gs.nav_hunk("last") end, "Last Hunk")
-					map("n", "[H", function() gs.nav_hunk("first") end, "First Hunk")
+					map("n", "]C", function() gs.nav_hunk("last") end, "Last Hunk")
+					map("n", "[C", function() gs.nav_hunk("first") end, "First Hunk")
 					map({ "n", "v" }, "<leader>ghs", ":Gitsigns stage_hunk<CR>", "Stage Hunk")
 					map({ "n", "v" }, "<leader>ghr", ":Gitsigns reset_hunk<CR>", "Reset Hunk")
 					map("n", "<leader>ghS", gs.stage_buffer, "Stage Buffer")
@@ -218,6 +254,19 @@ require("lazy").setup({
 			},
 		},
 		{
+			"sindrets/diffview.nvim",
+			cmd = { "DiffviewOpen", "DiffviewFileHistory" },
+			keys = {
+				{ "<leader>gd", "<cmd>DiffviewOpen<CR>", desc = "Diff review (working tree)" },
+			},
+			opts = {
+				keymaps = {
+					view = { { "n", "q", "<cmd>DiffviewClose<CR>", { desc = "Close diffview" } } },
+					file_panel = { { "n", "q", "<cmd>DiffviewClose<CR>", { desc = "Close diffview" } } },
+				},
+			},
+		},
+		{
 			"nvim-lualine/lualine.nvim",
 			event = "VeryLazy",
 			dependencies = { "nvim-tree/nvim-web-devicons" },
@@ -228,106 +277,33 @@ require("lazy").setup({
 			},
 		},
 		{
-			"hrsh7th/nvim-cmp",
-			event = "InsertEnter",
-			dependencies = {
-				"hrsh7th/cmp-nvim-lsp",
-				"hrsh7th/cmp-buffer",
-				"hrsh7th/cmp-path",
-			},
+			"nvim-treesitter/nvim-treesitter",
+			branch = "main",
+			build = ":TSUpdate",
 			config = function()
-				local cmp = require("cmp")
-
-				cmp.setup({
-					completion = { autocomplete = false, completeopt = "menu,menuone,noselect" },
-					snippet = { expand = function() end },
-					sources = cmp.config.sources({
-						{ name = "nvim_lsp" },
-						{ name = "path" },
-					}, {
-						{ name = "buffer" },
-					}),
-					mapping = cmp.mapping.preset.insert({
-						["<C-n>"] = cmp.mapping.select_next_item(),
-						["<C-p>"] = cmp.mapping.select_prev_item(),
-						["<C-Space>"] = cmp.mapping.complete(),
-						["<C-e>"] = cmp.mapping.abort(),
-						["<CR>"] = cmp.mapping.confirm({ select = true }),
-						["<Tab>"] = cmp.mapping(function(fallback)
-							if cmp.visible() then
-								cmp.select_next_item()
-							else
-								fallback()
-							end
-						end, { "i", "s" }),
-						["<S-Tab>"] = cmp.mapping(function(fallback)
-							if cmp.visible() then
-								cmp.select_prev_item()
-							else
-								fallback()
-							end
-						end, { "i", "s" }),
-					}),
-					enabled = function()
-						return vim.bo.buftype ~= "prompt"
-					end,
+				require("nvim-treesitter").install({
+					"python", "go", "bash", "javascript", "typescript", "html", "css",
+					"json", "toml", "yaml", "rust", "c", "cpp",
 				})
-
-				cmp.setup.filetype("markdown", { enabled = false })
 			end,
 		},
-		{ "mason-org/mason.nvim" },
 		{
 			"neovim/nvim-lspconfig",
-			dependencies = { "hrsh7th/cmp-nvim-lsp" },
 			config = function()
-				local capabilities = require("cmp_nvim_lsp").default_capabilities()
-
-				local function on_attach(client, bufnr)
-					local keymap = function(keys, fn, desc)
-						vim.keymap.set("n", keys, fn, { buffer = bufnr, desc = desc })
-					end
-
-					keymap("gd", vim.lsp.buf.definition, "Go to definition")
-					keymap("gr", vim.lsp.buf.references, "Go to references")
-					keymap("gD", vim.lsp.buf.declaration, "Go to declaration")
-					keymap("gi", vim.lsp.buf.implementation, "Go to implementation")
-						-- keymap("gt", vim.lsp.buf.type_definition, "Go to type definition")
-					keymap("K", vim.lsp.buf.hover, "Hover")
-					keymap("<leader>rn", vim.lsp.buf.rename, "Rename symbol")
-					keymap("<leader>ca", vim.lsp.buf.code_action, "Code action")
-					keymap("[d", vim.diagnostic.goto_prev, "Previous diagnostic")
-					keymap("]d", vim.diagnostic.goto_next, "Next diagnostic")
-
-					if client.server_capabilities.inlayHintProvider and vim.lsp.inlay_hint then
-						pcall(vim.lsp.inlay_hint, bufnr, true)
-					end
-				end
-
 				vim.lsp.config("lua_ls", {
-					capabilities = capabilities,
-					on_attach = on_attach,
 					settings = {
 						Lua = {
 							runtime = { version = "LuaJIT" },
 							workspace = {
 								checkThirdParty = false,
-								library = vim.api.nvim_get_runtime_file("", true),
+								library = { vim.env.VIMRUNTIME },
 							},
 							diagnostics = { globals = { "vim" } },
-							telemetry = { enable = false },
 						},
 					},
 				})
 
 				vim.lsp.config("basedpyright", {
-					capabilities = capabilities,
-					on_attach = function(client, bufnr)
-						on_attach(client, bufnr)
-						if client.server_capabilities.inlayHintProvider and vim.lsp.inlay_hint then
-							pcall(vim.lsp.inlay_hint, bufnr, false)
-						end
-					end,
 					settings = {
 						basedpyright = {
 							analysis = {
@@ -338,55 +314,26 @@ require("lazy").setup({
 					},
 				})
 
-				vim.lsp.config("bashls", {
-					capabilities = capabilities,
-					on_attach = on_attach,
-					filetypes = { "sh", "bash" },
-				})
-
 				vim.lsp.config("gopls", {
-					capabilities = capabilities,
-					on_attach = on_attach,
 					settings = {
 						gopls = {
-							analyses = {
-								unusedparams = true,
-								fieldalignment = true,
-							},
+							analyses = { unusedparams = true },
 							staticcheck = true,
 						},
 					},
 				})
 
 				vim.lsp.config("clangd", {
-					capabilities = capabilities,
-					on_attach = on_attach,
 					cmd = { "clangd", "--background-index", "--clang-tidy" },
 					filetypes = { "c", "cpp", "objc", "objcpp", "cuda", "proto" },
 				})
 
-				vim.lsp.config("ts_ls", {
-					capabilities = capabilities,
-					on_attach = on_attach,
-					filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact" },
-				})
-
-				vim.lsp.config("html", {
-					capabilities = capabilities,
-					on_attach = on_attach,
-				})
-
-				vim.lsp.config("cssls", {
-					capabilities = capabilities,
-					on_attach = on_attach,
-				})
-
 				vim.lsp.enable({ "lua_ls", "basedpyright", "bashls", "gopls", "clangd", "ts_ls", "html", "cssls" })
-
-				vim.diagnostic.config({ float = { border = "rounded" } })
 			end,
 		},
 	},
+	-- Keep the lockfile next to the real init.lua so it lives in the dotfiles repo
+	lockfile = vim.fn.fnamemodify(vim.fn.resolve(vim.fn.stdpath("config") .. "/init.lua"), ":h") .. "/lazy-lock.json",
 	install = { colorscheme = { "rose-pine" } },
 	change_detection = { notify = false },
 	performance = {

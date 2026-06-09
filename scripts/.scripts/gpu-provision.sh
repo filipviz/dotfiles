@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
-# Connect a running GPU host to the local codex-gpu workflow.
+# Connect a running GPU host to the local agent workflow.
 #
 # Sequence:
 # 1. Select a running Vast instance, RunPod pod, or Prime pod, prompting if needed.
-# 2. Ensure ~/.ssh/codex-key is loaded in ssh-agent.
-# 3. Rewrite the managed Host codex-gpu block in ~/.ssh/config.
-# 4. Wait until SSH works through codex-gpu.
+# 2. Ensure ~/.ssh/gpu-key is loaded in ssh-agent.
+# 3. Rewrite the managed Host gpu block in ~/.ssh/config.
+# 4. Wait until SSH works through gpu.
 # 5. Install local Ghostty terminfo on the remote host.
 # 6. Upload the current dotfiles checkout, project deploy key, and gpu-setup.sh.
 # 7. Run gpu-setup.sh on the remote host.
@@ -16,8 +16,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 DOTFILES_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 GPU_SETUP="$SCRIPT_DIR/gpu-setup.sh"
-HOST_ALIAS="codex-gpu"
-SSH_KEY="$HOME/.ssh/codex-key"
+HOST_ALIAS="gpu"
+SSH_KEY="$HOME/.ssh/gpu-key"
 REMOTE_DOTFILES_ARCHIVE="/tmp/dotfiles.tar.gz"
 REMOTE_GPU_SETUP="/tmp/gpu-setup.sh"
 DEPLOY_KEY="$HOME/.ssh/trustworthy-gradients"
@@ -49,7 +49,7 @@ check_common_prereqs() {
   [ -r "$DEPLOY_KEY" ] || die "missing trustworthy-gradients deploy key: $DEPLOY_KEY"
 }
 
-ensure_codex_key_loaded() {
+ensure_gpu_key_loaded() {
   local fp
   fp="$(ssh-keygen -lf "$SSH_KEY.pub" | awk '{print $2}')"
 
@@ -72,21 +72,22 @@ ensure_codex_key_loaded() {
   die "$SSH_KEY is not loaded in ssh-agent"
 }
 
-vast_instance_rows() {
-  vastai show instances-v1 --raw --all --status running |
-    jq -c '
-      def rows:
-        if type == "array" then .[]
-        elif type == "object" and has("instances") then .instances[]
-        else empty
-        end;
-      rows
-    '
+emit_candidate() {
+  jq -n -c \
+    --arg provider "$1" \
+    --arg id "$2" \
+    --arg gpu "$3" \
+    --arg status "$4" \
+    --arg user "$5" \
+    --arg host "$6" \
+    --arg port "$7" \
+    --arg label "$8" \
+    '{provider: $provider, id: $id, gpu: $gpu, status: $status, user: $user, host: $host, port: $port, label: $label}'
 }
 
 vast_candidate_from_instance() {
   local instance="$1"
-  local id gpu status label url endpoint hostport host port
+  local id gpu status label url endpoint hostport host="" port=""
 
   id="$(printf '%s\n' "$instance" | jq -r '(.id // .contract_id // "") | tostring')"
   [ -n "$id" ] || return 0
@@ -102,29 +103,17 @@ vast_candidate_from_instance() {
     fi
   fi
 
-  if [ -z "${host:-}" ] || [ -z "${port:-}" ] || [ "$host" = "$port" ]; then
-    host="$(printf '%s\n' "$instance" | jq -r '
-      def public_ssh_host:
-        (.public_ipaddr // "") | tostring;
-      def public_ssh_port:
+  if [ -z "$host" ] || [ -z "$port" ] || [ "$host" = "$port" ]; then
+    IFS=$'\t' read -r host port < <(printf '%s\n' "$instance" | jq -r '
+      def public_port:
         (.ports["22/tcp"] // [])
         | map(select((.HostPort // "") != "") | (.HostPort | tostring))
         | first // "";
-      if public_ssh_host != "" and public_ssh_port != "" then public_ssh_host
-      else (.ssh_host // "") | tostring
-      end
-    ')"
-    port="$(printf '%s\n' "$instance" | jq -r '
-      def public_ssh_host:
-        (.public_ipaddr // "") | tostring;
-      def public_ssh_port:
-        (.ports["22/tcp"] // [])
-        | map(select((.HostPort // "") != "") | (.HostPort | tostring))
-        | first // "";
-      if public_ssh_host != "" and public_ssh_port != "" then public_ssh_port
-      else (.ssh_port // "") | tostring
-      end
-    ')"
+      if (.public_ipaddr // "") != "" and public_port != ""
+      then [(.public_ipaddr | tostring), public_port]
+      else [((.ssh_host // "") | tostring), ((.ssh_port // "") | tostring)]
+      end | @tsv
+    ')
   fi
 
   [ -n "$host" ] || return 0
@@ -135,58 +124,38 @@ vast_candidate_from_instance() {
   status="$(printf '%s\n' "$instance" | jq -r '(.actual_status // .cur_state // "unknown") | tostring')"
   label="$(printf '%s\n' "$instance" | jq -r '(.label // .machine_name // "") | tostring')"
 
-  jq -n -c \
-    --arg provider "vast" \
-    --arg id "$id" \
-    --arg gpu "$gpu" \
-    --arg status "$status" \
-    --arg user "root" \
-    --arg host "$host" \
-    --arg port "$port" \
-    --arg label "$label" \
-    '{provider: $provider, id: $id, gpu: $gpu, status: $status, user: $user, host: $host, port: $port, label: $label}'
+  emit_candidate vast "$id" "$gpu" "$status" root "$host" "$port" "$label"
 }
 
 vast_candidates() {
-  vast_instance_rows | while IFS= read -r instance; do
-    [ -n "$instance" ] && vast_candidate_from_instance "$instance"
-  done
-}
-
-runpod_pod_rows() {
-  runpodctl pod list --status RUNNING --compute-type GPU -o json |
+  vastai show instances-v1 --raw --all --status running |
     jq -c '
       if type == "array" then .[]
-      elif type == "object" and has("pods") then .pods[]
+      elif type == "object" and has("instances") then .instances[]
       else empty
       end
-    '
+    ' |
+    while IFS= read -r instance; do
+      [ -n "$instance" ] && vast_candidate_from_instance "$instance"
+    done
 }
 
-runpod_ssh_host() {
+# runpodctl's JSON shape has varied across versions; try the spellings we have
+# seen, plus parsing the printed ssh command. Emits "host<TAB>port".
+runpod_ssh_endpoint() {
   jq -r '
     def cmd:
       .command // .sshCommand // .ssh_command //
       (if (.ssh? | type) == "string" then .ssh else empty end) // "";
 
-    .host // .hostname // .ip // .sshHost // .ssh_host //
-    .ssh.host? // .ssh.hostname? // .connection.host? //
-    (cmd | capture("@(?<host>[^[:space:]]+)")? | .host) //
-    empty
-  '
-}
-
-runpod_ssh_port() {
-  jq -r '
-    def cmd:
-      .command // .sshCommand // .ssh_command //
-      (if (.ssh? | type) == "string" then .ssh else empty end) // "";
-
-    .port // .publicPort // .public_port // .sshPort // .ssh_port //
-    .ssh.port? // .connection.port? //
-    (cmd | capture("[[:space:]]-p[[:space:]]+(?<port>[0-9]+)")? | .port) //
-    empty
-    | tostring
+    [
+      (.host // .hostname // .ip // .sshHost // .ssh_host //
+       .ssh.host? // .ssh.hostname? // .connection.host? //
+       (cmd | capture("@(?<host>[^[:space:]]+)")? | .host) // ""),
+      ((.port // .publicPort // .public_port // .sshPort // .ssh_port //
+        .ssh.port? // .connection.port? //
+        (cmd | capture("[[:space:]]-p[[:space:]]+(?<port>[0-9]+)")? | .port) // "") | tostring)
+    ] | @tsv
   '
 }
 
@@ -205,29 +174,25 @@ runpod_candidate_from_pod() {
     return 0
   fi
 
-  host="$(printf '%s\n' "$ssh_info" | runpod_ssh_host)"
-  port="$(printf '%s\n' "$ssh_info" | runpod_ssh_port)"
-
+  IFS=$'\t' read -r host port < <(printf '%s\n' "$ssh_info" | runpod_ssh_endpoint)
   if [ -z "$host" ] || [ -z "$port" ]; then
     return 0
   fi
 
-  jq -n -c \
-    --arg provider "runpod" \
-    --arg id "$id" \
-    --arg gpu "$gpu" \
-    --arg status "$status" \
-    --arg user "root" \
-    --arg host "$host" \
-    --arg port "$port" \
-    --arg label "$name" \
-    '{provider: $provider, id: $id, gpu: $gpu, status: $status, user: $user, host: $host, port: $port, label: $label}'
+  emit_candidate runpod "$id" "$gpu" "$status" root "$host" "$port" "$name"
 }
 
 runpod_candidates() {
-  runpod_pod_rows | while IFS= read -r pod; do
-    [ -n "$pod" ] && runpod_candidate_from_pod "$pod"
-  done
+  runpodctl pod list --status RUNNING --compute-type GPU -o json |
+    jq -c '
+      if type == "array" then .[]
+      elif type == "object" and has("pods") then .pods[]
+      else empty
+      end
+    ' |
+    while IFS= read -r pod; do
+      [ -n "$pod" ] && runpod_candidate_from_pod "$pod"
+    done
 }
 
 ensure_runpod_key_registered() {
@@ -240,11 +205,6 @@ ensure_runpod_key_registered() {
   fi
 
   die "$SSH_KEY.pub is not registered with RunPod; run: runpodctl ssh add-key --key-file $SSH_KEY.pub before creating pods"
-}
-
-prime_pod_rows() {
-  prime --plain pods list --output json |
-    jq -c '(.pods // [])[]'
 }
 
 prime_candidate_from_pod() {
@@ -286,22 +246,15 @@ prime_candidate_from_pod() {
   status="$(printf '%s\n' "$details" | jq -r '(.status // "unknown") | tostring')"
   label="$(printf '%s\n' "$details" | jq -r '(.name // "") | tostring')"
 
-  jq -n -c \
-    --arg provider "prime" \
-    --arg id "$id" \
-    --arg gpu "$gpu" \
-    --arg status "$status" \
-    --arg user "$user" \
-    --arg host "$host" \
-    --arg port "$port" \
-    --arg label "$label" \
-    '{provider: $provider, id: $id, gpu: $gpu, status: $status, user: $user, host: $host, port: $port, label: $label}'
+  emit_candidate prime "$id" "$gpu" "$status" "$user" "$host" "$port" "$label"
 }
 
 prime_candidates() {
-  prime_pod_rows | while IFS= read -r pod; do
-    [ -n "$pod" ] && prime_candidate_from_pod "$pod"
-  done
+  prime --plain pods list --output json |
+    jq -c '(.pods // [])[]' |
+    while IFS= read -r pod; do
+      [ -n "$pod" ] && prime_candidate_from_pod "$pod"
+    done
 }
 
 is_valid_candidate() {
@@ -314,31 +267,19 @@ is_valid_candidate() {
   ' >/dev/null 2>&1
 }
 
+# Run a discovery function, passing through candidate JSON lines and logging
+# anything else (CLI warnings, errors) instead.
 capture_candidates() {
-  local provider="$1"
-  local discover="$2"
-  local stderr_file output row
+  local provider="$1" discover="$2" row
 
-  stderr_file="$(mktemp -t gpu-provision.XXXXXX)"
-  if output="$("$discover" 2>"$stderr_file")"; then
-    while IFS= read -r row; do
-      [ -n "$row" ] || continue
-      if printf '%s\n' "$row" | is_valid_candidate; then
-        printf '%s\n' "$row"
-      else
-        log "Ignoring non-candidate output from $provider discovery: $row"
-      fi
-    done <<<"$output"
-  else
-    log "$provider discovery failed:"
-    while IFS= read -r row; do
-      [ -n "$row" ] && log "$row"
-    done <<<"$output"
-    while IFS= read -r row; do
-      [ -n "$row" ] && log "$row"
-    done <"$stderr_file"
-  fi
-  rm -f "$stderr_file"
+  "$discover" 2>&1 | while IFS= read -r row; do
+    [ -n "$row" ] || continue
+    if printf '%s\n' "$row" | is_valid_candidate; then
+      printf '%s\n' "$row"
+    else
+      log "$provider discovery: $row"
+    fi
+  done
 }
 
 describe_candidate() {
@@ -355,70 +296,50 @@ describe_candidate() {
 choose_from_candidates() {
   local candidates=("$@")
 
-  case "${#candidates[@]}" in
-    0)
-      die "no running SSH-capable GPU hosts found"
-      ;;
-    1)
-      printf '%s\n' "${candidates[0]}"
-      ;;
-    *)
-      [ -t 0 ] || die "multiple GPU hosts found but stdin is not interactive"
-      log "Multiple running GPU hosts found:"
-      local i=1
-      local row
-      for row in "${candidates[@]}"; do
-        printf '  %d) %s\n' "$i" "$(printf '%s\n' "$row" | describe_candidate)" >&2
-        i=$((i + 1))
-      done
+  if [ "${#candidates[@]}" -eq 1 ]; then
+    printf '%s\n' "${candidates[0]}"
+    return
+  fi
 
-      printf 'Choose host to set up: ' >&2
-      local choice
-      read -r choice
-      case "$choice" in
-        ''|*[!0-9]*)
-          die "invalid choice: $choice"
-          ;;
-      esac
-      if [ "$choice" -lt 1 ] || [ "$choice" -gt "${#candidates[@]}" ]; then
-        die "invalid choice: $choice"
-      fi
-      printf '%s\n' "${candidates[$((choice - 1))]}"
+  [ -t 0 ] || die "multiple GPU hosts found but stdin is not interactive"
+  log "Multiple running GPU hosts found:"
+  local i=1
+  local row
+  for row in "${candidates[@]}"; do
+    printf '  %d) %s\n' "$i" "$(printf '%s\n' "$row" | describe_candidate)" >&2
+    i=$((i + 1))
+  done
+
+  printf 'Choose host to set up: ' >&2
+  local choice
+  read -r choice
+  case "$choice" in
+    ''|*[!0-9]*)
+      die "invalid choice: $choice"
       ;;
   esac
+  if [ "$choice" -lt 1 ] || [ "$choice" -gt "${#candidates[@]}" ]; then
+    die "invalid choice: $choice"
+  fi
+  printf '%s\n' "${candidates[$((choice - 1))]}"
 }
 
 select_candidate() {
   local candidates=()
-  local output row
+  local spec provider cmd discover row
 
-  if command -v vastai >/dev/null 2>&1; then
-    output="$(capture_candidates "Vast" vast_candidates)"
+  for spec in vast:vastai:vast_candidates runpod:runpodctl:runpod_candidates prime:prime:prime_candidates; do
+    IFS=: read -r provider cmd discover <<<"$spec"
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+      log "Skipping $provider discovery: $cmd not found"
+      continue
+    fi
     while IFS= read -r row; do
       [ -n "$row" ] && candidates+=("$row")
-    done <<<"$output"
-  else
-    log "Skipping Vast discovery: vastai not found"
-  fi
+    done < <(capture_candidates "$provider" "$discover")
+  done
 
-  if command -v runpodctl >/dev/null 2>&1; then
-    output="$(capture_candidates "RunPod" runpod_candidates)"
-    while IFS= read -r row; do
-      [ -n "$row" ] && candidates+=("$row")
-    done <<<"$output"
-  else
-    log "Skipping RunPod discovery: runpodctl not found"
-  fi
-
-  if command -v prime >/dev/null 2>&1; then
-    output="$(capture_candidates "Prime" prime_candidates)"
-    while IFS= read -r row; do
-      [ -n "$row" ] && candidates+=("$row")
-    done <<<"$output"
-  else
-    log "Skipping Prime discovery: prime not found"
-  fi
-
+  [ "${#candidates[@]}" -gt 0 ] || die "no running SSH-capable GPU hosts found"
   choose_from_candidates "${candidates[@]}"
 }
 
@@ -440,8 +361,8 @@ update_ssh_config() {
   tmp="$(mktemp)"
 
   awk -v alias="$HOST_ALIAS" '
-    /^# BEGIN codex-gpu managed by (vast-setup|gpu-provision)[.]sh$/ { skip=1; next }
-    /^# END codex-gpu managed by (vast-setup|gpu-provision)[.]sh$/ { skip=0; next }
+    /^# BEGIN (codex-)?gpu managed by (vast-setup|gpu-provision)[.]sh$/ { skip=1; next }
+    /^# END (codex-)?gpu managed by (vast-setup|gpu-provision)[.]sh$/ { skip=0; next }
     skip { next }
     $1 == "Host" && $2 == alias { skip_host=1; next }
     skip_host && $1 == "Host" { skip_host=0 }
@@ -451,7 +372,7 @@ update_ssh_config() {
 
   {
     cat "$tmp"
-    printf '\n# BEGIN codex-gpu managed by gpu-provision.sh\n'
+    printf '\n# BEGIN gpu managed by gpu-provision.sh\n'
     printf 'Host %s\n' "$HOST_ALIAS"
     printf '  HostName %s\n' "$host"
     printf '  User %s\n' "$user"
@@ -460,7 +381,7 @@ update_ssh_config() {
     printf '  Port %s\n' "$port"
     printf '  RequestTTY force\n'
     printf '  StrictHostKeyChecking accept-new\n'
-    printf '# END codex-gpu managed by gpu-provision.sh\n'
+    printf '# END gpu managed by gpu-provision.sh\n'
   } >"$HOME/.ssh/config"
 
   rm -f "$tmp"
@@ -520,7 +441,7 @@ install_ghostty_terminfo() {
 main() {
   [ "$#" -eq 0 ] || die "gpu-provision.sh does not accept arguments"
   check_common_prereqs
-  ensure_codex_key_loaded
+  ensure_gpu_key_loaded
 
   local candidate
   candidate="$(select_candidate)"

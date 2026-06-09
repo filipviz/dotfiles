@@ -6,6 +6,14 @@ export PAGER="less"
 export PATH="$HOME/.scripts:$HOME/.local/bin:$PATH"
 
 set -o vi
+# Disable ctrl-s terminal freeze (nvim uses <C-s> for LSP signature help).
+# 2>/dev/null: this file is also sourced by non-interactive ssh shells.
+stty stop undef 2>/dev/null
+
+HISTSIZE=50000
+HISTFILESIZE=50000
+HISTCONTROL=ignoredups:ignorespace
+shopt -s histappend
 
 alias ls='ls --color=auto'
 alias lg="lazygit"

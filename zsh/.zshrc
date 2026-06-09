@@ -6,17 +6,17 @@ setopt interactive_comments
 # history
 HISTSIZE=50000
 SAVEHIST=50000
-setopt inc_append_history
 setopt share_history
 setopt hist_ignore_dups
 # Ignore commands starting with a space
 setopt hist_ignore_space
 
-# autoload -Uz vcs_info
-# precmd() { vcs_info }
-# zstyle ':vcs_info:git:*' formats '%b '
-# setopt PROMPT_SUBST
-# PROMPT='%F{green}%*%f %F{blue}%~%f %F{red}${vcs_info_msg_0_}%f$ '
+# prompt: time, cwd, git branch
+autoload -Uz vcs_info
+precmd() { vcs_info }
+zstyle ':vcs_info:git:*' formats '%b '
+setopt PROMPT_SUBST
+PROMPT='%F{green}%*%f %F{blue}%~%f %F{red}${vcs_info_msg_0_}%f$ '
 
 # Miscellaneous setup.
 alias ls='ls --color=auto'
@@ -24,6 +24,7 @@ alias sqlite="/opt/homebrew/opt/sqlite/bin/sqlite3"
 alias ding="afplay /System/Library/Sounds/Glass.aiff"
 alias dl-audio="yt-dlp -f 140 --embed-chapters"
 alias lg="lazygit"
+export LG_CONFIG_FILE="$HOME/.config/lazygit/config.yml"
 
 export GPG_TTY=$(tty)
 
@@ -31,7 +32,7 @@ export GPG_TTY=$(tty)
 autoload -U compinit
 zstyle ':completion:*' menu select
 zmodload zsh/complist
-if [[ ! -f $ZDOTDIR/.zcompdump ]]; then compinit -i
+if [[ ! -f ${ZDOTDIR:-$HOME}/.zcompdump ]]; then compinit -i
 else
   compinit -C
 fi
@@ -65,11 +66,7 @@ zle -N zle-line-init
 
 # fzf bindings and helper
 if command -v fzf &> /dev/null; then
-	if (( $+functions[zsh-defer] )); then
-		zsh-defer source <(fzf --zsh)
-	else
-		source <(fzf --zsh)
-	fi
+	source <(fzf --zsh)
 	ff() {
 	  fzf --height 40% --layout reverse \
 		  --preview 'head -n $FZF_PREVIEW_LINES {} | cat -n' \

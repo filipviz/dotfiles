@@ -1,0 +1,19 @@
+# Portable git config. Git merges this with ~/.gitconfig (which wins on
+# conflicts and keeps machine-specific identity/credential settings).
+
+[core]
+	# side-by-side via flag (not [delta]) so lazygit's unified pager isn't affected
+	pager = delta --side-by-side
+
+[interactive]
+	diffFilter = delta --color-only
+
+[delta]
+	navigate = true
+	line-numbers = true
+
+[merge]
+	conflictstyle = zdiff3
+
+[diff]
+	colorMoved = default

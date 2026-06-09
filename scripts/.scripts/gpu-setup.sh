@@ -4,12 +4,13 @@
 #
 # Sequence:
 # 1. Install the small baseline toolchain with apt.
-# 2. Install lazygit, fzf, Neovim, and uv.
+# 2. Install lazygit, fzf, delta, Neovim, tree-sitter, and uv.
 # 3. Install the trustworthy-gradients deploy key from /tmp.
 # 4. Install the dotfiles repo and link the portable configs.
 # 5. Install standalone Codex and start its app-server daemon.
-# 6. Clone or update trustworthy-gradients, run uv sync, then start prepare.py in the background.
-# 7. Verify commands, dotfiles, deploy key, repo, and Codex daemon.
+# 6. Install Claude Code.
+# 7. Clone or update trustworthy-gradients, run uv sync, then start prepare.py in the background.
+# 8. Verify commands, dotfiles, deploy key, repo, and the Codex daemon.
 
 set -euo pipefail
 
@@ -49,6 +50,33 @@ sudo_cmd() {
   fi
 }
 
+target_arch() {
+  case "$(uname -m)" in
+    x86_64|amd64) printf '%s\n' "$1" ;;
+    aarch64|arm64) printf '%s\n' "$2" ;;
+    *) die "unsupported architecture: $(uname -m)" ;;
+  esac
+}
+
+latest_github_version() {
+  curl -fsSL "https://api.github.com/repos/$1/releases/latest" |
+    sed -n 's/.*"tag_name":[[:space:]]*"v\{0,1\}\([^"]*\)".*/\1/p' |
+    head -n 1
+}
+
+# Download a release tarball and install a single binary from it. The third
+# argument is the binary's path inside the archive when it isn't at the root.
+install_release_binary() {
+  local name="$1" url="$2" member="${3:-$1}"
+  local tmpdir sudo
+  tmpdir="$(mktemp -d)"
+  curl -fsSL "$url" -o "$tmpdir/archive.tar.gz"
+  tar -xzf "$tmpdir/archive.tar.gz" -C "$tmpdir" "$member"
+  sudo="$(sudo_cmd)"
+  $sudo install -m 0755 "$tmpdir/$member" "/usr/local/bin/$name"
+  rm -rf "$tmpdir"
+}
+
 install_packages() {
   local sudo
   sudo="$(sudo_cmd)"
@@ -61,6 +89,7 @@ install_packages() {
     curl \
     fd-find \
     git \
+    jq \
     less \
     nnn \
     ripgrep \
@@ -78,35 +107,31 @@ install_lazygit() {
     return
   fi
 
-  local arch version tmpdir url sudo
-  case "$(uname -m)" in
-    x86_64|amd64)
-      arch="x86_64"
-      ;;
-    aarch64|arm64)
-      arch="arm64"
-      ;;
-    *)
-      die "unsupported architecture for lazygit install: $(uname -m)"
-      ;;
-  esac
-
-  log "Installing lazygit..."
-  version="$(
-    curl -fsSL https://api.github.com/repos/jesseduffield/lazygit/releases/latest |
-      sed -n 's/.*"tag_name":[[:space:]]*"v\([^"]*\)".*/\1/p' |
-      head -n 1
-  )"
+  local arch version
+  arch="$(target_arch x86_64 arm64)"
+  version="$(latest_github_version jesseduffield/lazygit)"
   [ -n "$version" ] || die "could not determine latest lazygit version"
 
-  tmpdir="$(mktemp -d)"
-  trap 'rm -rf "$tmpdir"; trap - RETURN' RETURN
-  url="https://github.com/jesseduffield/lazygit/releases/download/v${version}/lazygit_${version}_Linux_${arch}.tar.gz"
-  curl -fsSL "$url" -o "$tmpdir/lazygit.tar.gz"
-  tar -xzf "$tmpdir/lazygit.tar.gz" -C "$tmpdir" lazygit
+  log "Installing lazygit..."
+  install_release_binary lazygit \
+    "https://github.com/jesseduffield/lazygit/releases/download/v${version}/lazygit_${version}_Linux_${arch}.tar.gz"
+}
 
-  sudo="$(sudo_cmd)"
-  $sudo install -m 0755 "$tmpdir/lazygit" /usr/local/bin/lazygit
+install_delta() {
+  if command -v delta >/dev/null 2>&1; then
+    log "delta already installed."
+    return
+  fi
+
+  local target version
+  target="$(target_arch x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu)"
+  version="$(latest_github_version dandavison/delta)"
+  [ -n "$version" ] || die "could not determine latest delta version"
+
+  log "Installing delta..."
+  install_release_binary delta \
+    "https://github.com/dandavison/delta/releases/download/${version}/delta-${version}-${target}.tar.gz" \
+    "delta-${version}-${target}/delta"
 }
 
 fzf_is_modern() {
@@ -122,37 +147,14 @@ install_fzf() {
     return
   fi
 
-  local arch version tmpdir url sudo
-  case "$(uname -m)" in
-    x86_64|amd64)
-      arch="amd64"
-      ;;
-    aarch64|arm64)
-      arch="arm64"
-      ;;
-    *)
-      die "unsupported architecture for fzf install: $(uname -m)"
-      ;;
-  esac
-
-  log "Installing fzf..."
-  version="$(
-    curl -fsSL https://api.github.com/repos/junegunn/fzf/releases/latest |
-      sed -n 's/.*"tag_name":[[:space:]]*"v\([^"]*\)".*/\1/p' |
-      head -n 1
-  )"
+  local arch version
+  arch="$(target_arch amd64 arm64)"
+  version="$(latest_github_version junegunn/fzf)"
   [ -n "$version" ] || die "could not determine latest fzf version"
 
-  tmpdir="$(mktemp -d)"
-  trap 'rm -rf "$tmpdir"; trap - RETURN' RETURN
-  url="https://github.com/junegunn/fzf/releases/download/v${version}/fzf-${version}-linux_${arch}.tar.gz"
-  curl -fsSL "$url" -o "$tmpdir/fzf.tar.gz"
-  tar -xzf "$tmpdir/fzf.tar.gz" -C "$tmpdir" fzf
-
-  sudo="$(sudo_cmd)"
-  $sudo install -m 0755 "$tmpdir/fzf" /usr/local/bin/fzf
-  mkdir -p "$HOME/.local/bin"
-  ln -sf /usr/local/bin/fzf "$HOME/.local/bin/fzf"
+  log "Installing fzf..."
+  install_release_binary fzf \
+    "https://github.com/junegunn/fzf/releases/download/v${version}/fzf-${version}-linux_${arch}.tar.gz"
 }
 
 install_neovim() {
@@ -162,32 +164,39 @@ install_neovim() {
     return
   fi
 
-  local arch tmpdir url sudo
-  case "$(uname -m)" in
-    x86_64|amd64)
-      arch="x86_64"
-      ;;
-    aarch64|arm64)
-      arch="arm64"
-      ;;
-    *)
-      die "unsupported architecture for Neovim install: $(uname -m)"
-      ;;
-  esac
+  local arch tmpdir sudo
+  arch="$(target_arch x86_64 arm64)"
 
   log "Installing Neovim..."
   tmpdir="$(mktemp -d)"
-  trap 'rm -rf "$tmpdir"; trap - RETURN' RETURN
-  url="https://github.com/neovim/neovim/releases/latest/download/nvim-linux-${arch}.tar.gz"
-  curl -fsSL "$url" -o "$tmpdir/nvim.tar.gz"
+  curl -fsSL "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-${arch}.tar.gz" \
+    -o "$tmpdir/nvim.tar.gz"
 
   sudo="$(sudo_cmd)"
   $sudo rm -rf "/opt/nvim-linux-${arch}"
   $sudo tar -xzf "$tmpdir/nvim.tar.gz" -C /opt
   $sudo chmod -R a+rX "/opt/nvim-linux-${arch}"
   $sudo ln -sf "/opt/nvim-linux-${arch}/bin/nvim" /usr/local/bin/nvim
-  mkdir -p "$HOME/.local/bin"
-  ln -sf "/opt/nvim-linux-${arch}/bin/nvim" "$HOME/.local/bin/nvim"
+  rm -rf "$tmpdir"
+}
+
+# Needed for nvim-treesitter parser installs.
+install_tree_sitter() {
+  if command -v tree-sitter >/dev/null 2>&1; then
+    log "tree-sitter already installed."
+    return
+  fi
+
+  local arch tmpdir sudo
+  arch="$(target_arch x64 arm64)"
+
+  log "Installing tree-sitter CLI..."
+  tmpdir="$(mktemp -d)"
+  curl -fsSL "https://github.com/tree-sitter/tree-sitter/releases/latest/download/tree-sitter-linux-${arch}.gz" |
+    gunzip >"$tmpdir/tree-sitter"
+  sudo="$(sudo_cmd)"
+  $sudo install -m 0755 "$tmpdir/tree-sitter" /usr/local/bin/tree-sitter
+  rm -rf "$tmpdir"
 }
 
 install_uv() {
@@ -229,11 +238,29 @@ install_codex() {
     local sudo
     sudo="$(sudo_cmd)"
     $sudo ln -sf "$codex_bin" /usr/local/bin/codex
+    $sudo ln -sf "$DOTFILES_DIR/codex/.codex/notify-tmux.sh" /usr/local/bin/codex-notify-tmux
   fi
 
   log "Starting Codex app server..."
   codex app-server daemon bootstrap --remote-control
   codex app-server daemon start
+}
+
+install_claude() {
+  export PATH="$HOME/.local/bin:$PATH"
+
+  if command -v claude >/dev/null 2>&1; then
+    log "Claude Code already installed."
+  else
+    log "Installing Claude Code..."
+    curl -fsSL https://claude.ai/install.sh | bash
+  fi
+
+  if [ -x "$HOME/.local/bin/claude" ]; then
+    local sudo
+    sudo="$(sudo_cmd)"
+    $sudo ln -sf "$HOME/.local/bin/claude" /usr/local/bin/claude
+  fi
 }
 
 setup_trustworthy_gradients() {
@@ -279,7 +306,6 @@ EOF
     UV_HTTP_TIMEOUT="$UV_HTTP_TIMEOUT" uv sync
   )
 
-  require_command nohup
   log "Starting PG-19 preparation in background; logs: $REPO_DIR/prep.log"
   (
     cd "$REPO_DIR"
@@ -302,62 +328,26 @@ install_dotfiles_repo() {
     log "Cloning dotfiles..."
     git clone "$DOTFILES_REPO" "$DOTFILES_DIR"
   fi
-
-  if [ -e "$DOTFILES_DIR/scripts/.scripts/gpu-provision.sh" ]; then
-    rm -f "$DOTFILES_DIR/scripts/.scripts/vast-setup.sh"
-  fi
 }
 
+# link_config keep|replace <src> <dest>: symlink dest -> src. An existing real
+# file is left alone (keep) or moved to <dest>.before-gpu-setup (replace).
 link_config() {
-  local mode="$1"
-  local src="$2"
-  local dest="$3"
-  local backup="${dest}.before-gpu-setup"
-  local parent
+  local mode="$1" src="$2" dest="$3"
 
-  case "$mode" in
-    keep|replace)
-      ;;
-    *)
-      die "unknown link mode: $mode"
-      ;;
-  esac
+  [ -e "$src" ] || die "missing dotfiles path: $src"
+  mkdir -p "$(dirname "$dest")"
 
-  if [ ! -e "$src" ]; then
-    die "missing dotfiles path: $src"
-  fi
-
-  parent="$(dirname "$dest")"
-  mkdir -p "$parent"
-
-  if [ ! -w "$parent" ]; then
-    local sudo
-    sudo="$(sudo_cmd)"
-    $sudo chown "$(id -u):$(id -g)" "$parent"
-    $sudo chmod u+w "$parent"
-  fi
-
-  [ -w "$parent" ] || die "cannot write to $parent"
-
-  if [ -L "$dest" ]; then
-    ln -sfn "$src" "$dest"
-    return
-  fi
-
-  if [ -e "$dest" ]; then
+  if [ -e "$dest" ] && [ ! -L "$dest" ]; then
     if [ "$mode" = keep ]; then
       log "$dest already exists; leaving it unchanged."
       return
     fi
-
-    if [ -e "$backup" ]; then
-      die "$dest exists and $backup already exists; inspect before replacing"
-    fi
-    mv "$dest" "$backup"
-    log "Moved existing $dest to $backup."
+    mv "$dest" "$dest.before-gpu-setup"
+    log "Moved existing $dest to $dest.before-gpu-setup."
   fi
 
-  ln -s "$src" "$dest"
+  ln -sfn "$src" "$dest"
 }
 
 link_dotfiles() {
@@ -368,25 +358,31 @@ link_dotfiles() {
   link_config keep "$DOTFILES_DIR/nvim/.config/nvim" "$HOME/.config/nvim"
   link_config replace "$DOTFILES_DIR/codex/.codex/config.gpu.toml" "$HOME/.codex/config.toml"
   link_config keep "$DOTFILES_DIR/codex/.codex/AGENTS.md" "$HOME/.codex/AGENTS.md"
+  link_config replace "$DOTFILES_DIR/claude/.claude/settings.gpu.json" "$HOME/.claude/settings.json"
+  link_config keep "$DOTFILES_DIR/claude/.claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
+  link_config keep "$DOTFILES_DIR/claude/.claude/statusline-command.sh" "$HOME/.claude/statusline-command.sh"
+  link_config keep "$DOTFILES_DIR/claude/.claude/tmux-notify.sh" "$HOME/.claude/tmux-notify.sh"
+  link_config keep "$DOTFILES_DIR/git/.config/git/config" "$HOME/.config/git/config"
+  link_config keep "$DOTFILES_DIR/lazygit/.config/lazygit/config.yml" "$HOME/.config/lazygit/config.yml"
 }
 
 verify_setup() {
   log "Verifying setup..."
-  require_command tmux git lazygit nvim rg fd curl nnn fzf uv codex bwrap
+  require_command tmux git lazygit delta nvim tree-sitter rg fd curl nnn fzf jq uv codex claude bwrap
   test -d "$DOTFILES_DIR/.git"
-  test -d "$HOME/.scripts"
   test -x "$HOME/.scripts/gpu-setup.sh"
-  test -x "$HOME/.scripts/gpu-provision.sh"
   test -L "$HOME/.bashrc"
   test -e "$HOME/.tmux.conf"
   test -e "$HOME/.config/nvim/init.lua"
   test -s "$HOME/.codex/config.toml"
   test -s "$HOME/.codex/AGENTS.md"
+  test -s "$HOME/.claude/settings.json"
+  test -s "$HOME/.claude/CLAUDE.md"
   test -s "$DEPLOY_KEY_DEST"
   test -d "$REPO_DIR/.git"
-  nvim --clean --headless +'lua assert(vim.fn.has("nvim-0.11") == 1)' +qa
   codex --strict-config --version >/dev/null
   codex app-server daemon version
+  claude --version >/dev/null
 }
 
 main() {
@@ -397,12 +393,15 @@ main() {
   touch "$HOME/.no_auto_tmux"
   install_packages
   install_lazygit
+  install_delta
   install_fzf
   install_neovim
+  install_tree_sitter
   install_uv
   install_dotfiles_repo
   link_dotfiles
   install_codex
+  install_claude
   setup_trustworthy_gradients
   verify_setup
   nvidia-smi
