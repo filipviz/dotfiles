@@ -405,6 +405,7 @@ main() {
   install_codex
   setup_trustworthy_gradients
   verify_setup
+  nvidia-smi
   log "Done."
 }
 

@@ -27,4 +27,10 @@ if command -v fzf >/dev/null 2>&1; then
     [ -r /usr/share/doc/fzf/examples/key-bindings.bash ] && . /usr/share/doc/fzf/examples/key-bindings.bash
     [ -r /usr/share/doc/fzf/examples/completion.bash ] && . /usr/share/doc/fzf/examples/completion.bash
   fi
+
+  ff() {
+    fzf --height 40% --layout reverse \
+      --preview 'head -n $FZF_PREVIEW_LINES {} | cat -n' \
+      --bind 'enter:become(nvim {})'
+  }
 fi

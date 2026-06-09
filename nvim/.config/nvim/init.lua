@@ -34,8 +34,15 @@ vim.opt.tabstop = 4
 vim.opt.winborder = "rounded"
 vim.opt.list = true
 vim.opt.listchars = { trail = "-", nbsp = "+", tab = "  ", extends = ">", precedes = "<" }
+vim.opt.wrap = true
+vim.opt.linebreak = true
+vim.opt.breakindent = true
+vim.opt.breakindentopt = "shift:0"
+vim.opt.showbreak = "↪"
 vim.opt.shortmess:append("I")
 vim.opt.updatetime = 500
+vim.opt.termguicolors = true
+vim.env.COLORTERM = "truecolor"
 vim.g.markdown_fenced_languages = { "html", "css", "javascript", "python", "lua", "go", "bash=sh", "c", "cpp" }
 vim.opt.grepprg = "rg --vimgrep"
 vim.opt.grepformat = "%f:%l:%c:%m"
@@ -137,10 +144,11 @@ require("lazy").setup({
 			priority = 1000,
 			config = function()
 				require("rose-pine").setup({
+					variant = "moon",
 					styles = { italic = false },
 					palette = { moon = { base = "#000000" } },
 				})
-				vim.cmd.colorscheme("rose-pine-moon")
+				vim.cmd.colorscheme("rose-pine")
 			end,
 		},
 		{
