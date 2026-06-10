@@ -140,41 +140,24 @@ vast_candidates() {
     done
 }
 
-# runpodctl's JSON shape has varied across versions; try the spellings we have
-# seen, plus parsing the printed ssh command. Emits "host<TAB>port".
-runpod_ssh_endpoint() {
-  jq -r '
-    def cmd:
-      .command // .sshCommand // .ssh_command //
-      (if (.ssh? | type) == "string" then .ssh else empty end) // "";
-
-    [
-      (.host // .hostname // .ip // .sshHost // .ssh_host //
-       .ssh.host? // .ssh.hostname? // .connection.host? //
-       (cmd | capture("@(?<host>[^[:space:]]+)")? | .host) // ""),
-      ((.port // .publicPort // .public_port // .sshPort // .ssh_port //
-        .ssh.port? // .connection.port? //
-        (cmd | capture("[[:space:]]-p[[:space:]]+(?<port>[0-9]+)")? | .port) // "") | tostring)
-    ] | @tsv
-  '
-}
-
 runpod_candidate_from_pod() {
   local pod="$1"
   local id name status gpu ssh_info host port
 
-  id="$(printf '%s\n' "$pod" | jq -r '.id // .podId // .pod_id // .pod.id // .pod.podId // empty')"
+  id="$(printf '%s\n' "$pod" | jq -r '.id // empty')"
   [ -n "$id" ] || return 0
 
-  name="$(printf '%s\n' "$pod" | jq -r '.name // .pod.name // ""')"
-  status="$(printf '%s\n' "$pod" | jq -r '.desiredStatus // .status // .runtime.status // .pod.desiredStatus // .pod.status // "unknown"')"
-  gpu="$(printf '%s\n' "$pod" | jq -r '.machine.gpuDisplayName // .gpuDisplayName // .gpuTypeId // .gpu_type_id // .gpu // .pod.gpuTypeId // "unknown" | tostring')"
+  name="$(printf '%s\n' "$pod" | jq -r '.name // ""')"
+  status="$(printf '%s\n' "$pod" | jq -r '.desiredStatus // "unknown"')"
+  gpu="$(printf '%s\n' "$pod" | jq -r '.machine.gpuDisplayName // .gpuTypeId // "unknown" | tostring')"
 
   if ! ssh_info="$(runpodctl ssh info "$id" -o json 2>/dev/null)"; then
     return 0
   fi
 
-  IFS=$'\t' read -r host port < <(printf '%s\n' "$ssh_info" | runpod_ssh_endpoint)
+  # `runpodctl ssh info -o json` emits {.ip, .port, ...} (verified v2.3.0).
+  IFS=$'\t' read -r host port < <(printf '%s\n' "$ssh_info" |
+    jq -r '[(.ip // ""), ((.port // "") | tostring)] | @tsv')
   if [ -z "$host" ] || [ -z "$port" ]; then
     return 0
   fi
@@ -214,7 +197,7 @@ prime_candidate_from_pod() {
   id="$(printf '%s\n' "$pod" | jq -r '(.id // "") | tostring')"
   [ -n "$id" ] || return 0
 
-  if ! details="$(prime --plain pods status "$id" --output json 2>/dev/null)"; then
+  if ! details="$(PRIME_DISABLE_VERSION_CHECK=1 prime --plain pods status "$id" --output json 2>/dev/null)"; then
     return 0
   fi
 
@@ -250,7 +233,8 @@ prime_candidate_from_pod() {
 }
 
 prime_candidates() {
-  prime --plain pods list --output json |
+  # The version-check nag corrupts the JSON output, so disable it.
+  PRIME_DISABLE_VERSION_CHECK=1 prime --plain pods list --output json |
     jq -c '(.pods // [])[]' |
     while IFS= read -r pod; do
       [ -n "$pod" ] && prime_candidate_from_pod "$pod"
