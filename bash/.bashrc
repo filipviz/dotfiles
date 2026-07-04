@@ -1,11 +1,15 @@
 # Used on remote hosts
 
+# If not running interactively, don't do anything
+[[ $- != *i* ]] && return
+
+set -o vi
+PS1='[\u@\h \W]\$ '
 export EDITOR="nvim"
 export VISUAL="nvim"
 export PAGER="less"
 export PATH="$HOME/.scripts:$HOME/.local/bin:$PATH"
 
-set -o vi
 # Disable ctrl-s terminal freeze (nvim uses <C-s> for LSP signature help).
 # 2>/dev/null: this file is also sourced by non-interactive ssh shells.
 stty stop undef 2>/dev/null
@@ -16,8 +20,11 @@ HISTCONTROL=ignoredups:ignorespace
 shopt -s histappend
 
 alias ls='ls --color=auto'
+alias grep='grep --color=auto'
 alias lg="lazygit"
 
+alias cb='xclip -selection clipboard'
+alias pb='xclip -selection clipboard -out'
 clip() {
   if [ -n "${TMUX:-}" ] && command -v tmux >/dev/null 2>&1; then
     tmux load-buffer -w -

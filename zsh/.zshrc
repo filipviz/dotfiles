@@ -20,6 +20,8 @@ PROMPT='%F{green}%*%f %F{blue}%~%f %F{red}${vcs_info_msg_0_}%f$ '
 
 # Miscellaneous setup.
 alias ls='ls --color=auto'
+alias cb='xclip -selection clipboard'
+alias pb='xclip -selection clipboard -out'
 alias dl-audio="yt-dlp -f 140 --embed-chapters"
 alias lg="lazygit"
 export LG_CONFIG_FILE="$HOME/.config/lazygit/config.yml"
@@ -104,4 +106,14 @@ autoload edit-command-line; zle -N edit-command-line
 bindkey '^e' edit-command-line
 
 # Load zsh-syntax-highlighting
-source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+for zsh_syntax_highlighting in \
+	/opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
+	/usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
+	/usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+do
+	if [[ -r "$zsh_syntax_highlighting" ]]; then
+		source "$zsh_syntax_highlighting"
+		break
+	fi
+done
+unset zsh_syntax_highlighting
