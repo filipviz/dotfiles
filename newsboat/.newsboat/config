@@ -1,0 +1,24 @@
+browser "open %u"
+text-width 80
+reload-threads 8
+prepopulate-query-feeds yes
+bookmark-cmd "/Users/filip/Developer/dotfiles/newsboat/.newsboat/bookmark-url"
+bookmark-autopilot yes
+
+# refresh-on-startup yes
+cleanup-on-quit yes
+download-timeout 10
+download-retries 2
+error-log "~/.newsboat/error.log"
+
+feedlist-title-format "Feeds (%u/%t unread)"
+articlelist-title-format "%T (%u/%t unread)"
+itemview-title-format "%T - %F (%u/%t unread)"
+searchresult-title-format "Search: '%s' (%u/%t unread)"
+articlelist-format "%4i %f %D %?T?|%-17T|  ?%t"
+
+color title black green bold
+color info black green
+color listfocus black green
+color listnormal_unread white black
+color listfocus_unread black green

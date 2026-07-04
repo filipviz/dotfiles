@@ -124,8 +124,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
 			vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = args.buf }), { bufnr = args.buf })
 		end, { buffer = args.buf, desc = "Toggle inlay hints" })
 
-		vim.lsp.inlay_hint.enable(true, { bufnr = args.buf })
-
 		local client = vim.lsp.get_client_by_id(args.data.client_id)
 		if client and client:supports_method("textDocument/completion") then
 			vim.lsp.completion.enable(true, args.data.client_id, args.buf, { autotrigger = false })
@@ -182,9 +180,10 @@ require("lazy").setup({
 				require("rose-pine").setup({
 					variant = "moon",
 					styles = { italic = false },
-					palette = { moon = { base = "#000000" } },
+					-- palette = { moon = { base = "#000000" } },
 				})
 				vim.cmd.colorscheme("rose-pine")
+				-- vim.cmd.colorscheme("rose-pine-dawn")
 			end,
 		},
 		{

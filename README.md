@@ -4,7 +4,7 @@ GNU Stow packages. The repo lives outside `$HOME`, so always pass the target:
 
 ```sh
 cd ~/Developer/dotfiles
-stow -t "$HOME" bash claude codex ghostty git lazygit nvim scripts tmux zsh
+stow -t "$HOME" bash claude codex ghostty git lazygit newsboat nvim scripts tmux zsh
 ```
 
 `claude/` and `codex/` link individual files into the live `~/.claude` and

@@ -20,8 +20,6 @@ PROMPT='%F{green}%*%f %F{blue}%~%f %F{red}${vcs_info_msg_0_}%f$ '
 
 # Miscellaneous setup.
 alias ls='ls --color=auto'
-alias sqlite="/opt/homebrew/opt/sqlite/bin/sqlite3"
-alias ding="afplay /System/Library/Sounds/Glass.aiff"
 alias dl-audio="yt-dlp -f 140 --embed-chapters"
 alias lg="lazygit"
 export LG_CONFIG_FILE="$HOME/.config/lazygit/config.yml"

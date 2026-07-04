@@ -8,16 +8,6 @@
     "defaultMode": "auto"
   },
   "model": "claude-fable-5[1m]",
-  "statusLine": {
-    "type": "command",
-    "command": "sh /Users/filip/.claude/statusline-command.sh"
-  },
-  "enabledPlugins": {
-    "lua-lsp@claude-plugins-official": true,
-    "swift-lsp@claude-plugins-official": true
-  },
-  "syntaxHighlightingDisabled": false,
-  "preferredNotifChannel": "notifications_disabled",
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -25,8 +15,8 @@
           {
             "type": "command",
             "command": "sh \"$HOME/.claude/tmux-notify.sh\" prompt",
-            "async": true,
-            "timeout": 10
+            "timeout": 10,
+            "async": true
           }
         ]
       }
@@ -37,8 +27,8 @@
           {
             "type": "command",
             "command": "sh \"$HOME/.claude/tmux-notify.sh\" notification",
-            "async": true,
-            "timeout": 10
+            "timeout": 10,
+            "async": true
           }
         ]
       }
@@ -49,8 +39,8 @@
           {
             "type": "command",
             "command": "sh \"$HOME/.claude/tmux-notify.sh\" stop",
-            "async": true,
-            "timeout": 10
+            "timeout": 10,
+            "async": true
           }
         ]
       }
@@ -67,9 +57,19 @@
       }
     ]
   },
+  "statusLine": {
+    "type": "command",
+    "command": "sh /Users/filip/.claude/statusline-command.sh"
+  },
+  "enabledPlugins": {
+    "lua-lsp@claude-plugins-official": false,
+    "swift-lsp@claude-plugins-official": false
+  },
+  "syntaxHighlightingDisabled": false,
   "effortLevel": "xhigh",
   "theme": "auto",
   "editorMode": "vim",
+  "preferredNotifChannel": "notifications_disabled",
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
   "voiceEnabled": false

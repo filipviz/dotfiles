@@ -1,0 +1,13 @@
+#!/bin/sh
+
+bookmarks_file="${NEWSBOAT_BOOKMARKS_FILE:-$HOME/.newsboat/bookmarks.txt}"
+
+mkdir -p "$(dirname "$bookmarks_file")" || {
+  printf '%s\n' "could not create bookmark directory"
+  exit 0
+}
+
+printf '%s\n' "$1" >> "$bookmarks_file" || {
+  printf '%s\n' "could not write bookmark"
+  exit 0
+}

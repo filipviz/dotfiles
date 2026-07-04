@@ -1,0 +1,105 @@
+"query:Main:tags # \"main\""
+"query:Interesting:tags # \"interesting\""
+"query:GitHub:tags # \"github\""
+"query:arXiv:tags # \"arxiv\""
+"query:LessWrong:tags # \"lesswrong\""
+"query:Fun:tags # \"fun\""
+"query:Podcast:tags # \"podcast\""
+"query:YouTube:tags # \"youtube\""
+"query:Institutions:tags # \"institutions\""
+
+
+https://epochai.substack.com/feed ! main
+https://newsletter.semianalysis.com/feed ! main
+https://blog.aifutures.org/feed ! main "~AI 2027"
+https://joecarlsmith.com/rss.xml ! main
+https://www.mindthefuture.info/feed ! main
+https://www.forethought.org/feed ! main
+https://www.dwarkeshpatel.com/feed ! main "~Dwarkesh Patel"
+https://michaelnielsen1.substack.com/feed ! main
+
+https://lilianweng.github.io/index.xml ! interesting "~Lilian Weng"
+https://thinkingmachines.ai/blog/index.xml ! interesting "~Thinking Machines"
+https://karpathy.bearblog.dev/feed/ ! interesting "~Andrej Karpathy"
+https://sohl-dickstein.github.io/feed ! interesting "~Jascha Sohl-Dickstein"
+https://finbarr.ca/feed.xml ! interesting
+https://jeremybernste.in/feed.xml ! interesting "~Jeremy Bernstein"
+https://www.beren.io/feed.xml ! interesting "~Beren Millidge"
+https://roonscape.ai/feed ! interesting "~roon"
+
+https://github.com/KellerJordan/modded-nanogpt/commits/master.atom ! github "~modded-nanogpt"
+https://github.com/karpathy/nanochat/commits/master.atom ! github "~nanochat"
+https://github.com/karpathy/autoresearch/commits/master.atom ! github "~autoresearch"
+
+https://export.arxiv.org/api/query?search_query=au%3A%22David%20Duvenaud%22&sortBy=submittedDate&sortOrder=descending&max_results=50 ! arxiv "~David Duvenaud"
+https://export.arxiv.org/api/query?search_query=au%3A%22Jeremy%20M.%20Cohen%22&sortBy=submittedDate&sortOrder=descending&max_results=50 ! arxiv "~Jeremy M. Cohen"
+https://export.arxiv.org/api/query?search_query=au%3A%22Atli%20Kosson%22&sortBy=submittedDate&sortOrder=descending&max_results=50 ! arxiv "~Atli Kosson"
+https://export.arxiv.org/api/query?search_query=au%3A%22Nick%20Bostrom%22&sortBy=submittedDate&sortOrder=descending&max_results=50 ! arxiv "~Nick Bostrom"
+https://export.arxiv.org/api/query?search_query=au%3A%22Alec%20Radford%22&sortBy=submittedDate&sortOrder=descending&max_results=50 ! arxiv "~Alec Radford"
+https://export.arxiv.org/api/query?search_query=au%3A%22Christopher%20Olah%22&sortBy=submittedDate&sortOrder=descending&max_results=50 ! arxiv "~Christopher Olah"
+https://export.arxiv.org/api/query?search_query=au%3A%22Kaiming%20He%22&sortBy=submittedDate&sortOrder=descending&max_results=50 ! arxiv "~Kaiming He"
+https://export.arxiv.org/api/query?search_query=au%3A%22James%20Martens%22&sortBy=submittedDate&sortOrder=descending&max_results=50 ! arxiv "~James Martens"
+https://export.arxiv.org/api/query?search_query=au%3A%22Kaiyue%20Wen%22&sortBy=submittedDate&sortOrder=descending&max_results=50 ! arxiv "~Kaiyue Wen"
+https://export.arxiv.org/api/query?search_query=au%3A%22Alexander%20H%C3%A4gele%22&sortBy=submittedDate&sortOrder=descending&max_results=50 ! arxiv "~Alexander Hägele"
+
+https://www.lesswrong.com/feed.xml?view=curated ! lesswrong "~Curated"
+https://www.alignmentforum.org/feed.xml ! lesswrong "~Alignment Forum"
+https://www.lesswrong.com/feed.xml?userId=BCmzFRdQhqLPREvat ! lesswrong "~Richard Ngo"
+https://www.lesswrong.com/feed.xml?type=comments&view=shortform&userId=BCmzFRdQhqLPREvat ! lesswrong "~Richard Ngo"
+https://www.lesswrong.com/feed.xml?userId=YLFQfGzNdGA4NFcKS ! lesswrong "~Daniel Kokotajlo"
+https://www.lesswrong.com/feed.xml?type=comments&view=shortform&userId=YLFQfGzNdGA4NFcKS ! lesswrong "~Daniel Kokotajlo"
+https://www.lesswrong.com/feed.xml?userId=kWeghn3LXqeCduchM ! lesswrong "~havard"
+https://www.lesswrong.com/feed.xml?type=comments&view=shortform&userId=kWeghn3LXqeCduchM ! lesswrong "~havard"
+https://www.lesswrong.com/feed.xml?userId=BtbwfsEyeT4P2eqXu ! lesswrong "~gwern"
+https://www.lesswrong.com/feed.xml?type=comments&view=shortform&userId=BtbwfsEyeT4P2eqXu ! lesswrong "~gwern"
+https://www.lesswrong.com/feed.xml?userId=dfZAq9eZxs4BB4Ji5 ! lesswrong "~ryan_greenblatt"
+https://www.lesswrong.com/feed.xml?type=comments&view=shortform&userId=dfZAq9eZxs4BB4Ji5 ! lesswrong "~ryan_greenblatt"
+https://www.lesswrong.com/feed.xml?userId=k26FNEL3tvGuDC5JD ! lesswrong "~nostalgebraist"
+https://www.lesswrong.com/feed.xml?type=comments&view=shortform&userId=k26FNEL3tvGuDC5JD ! lesswrong "~nostalgebraist"
+
+https://www.secondbest.ca/feed ! fun
+https://borretti.me/feed.xml ! fun
+https://kipp.ly/feed ! fun
+https://blog.ezyang.com/feed.xml ! fun "~Edward Yang"
+https://zhengdongwang.com/feed.xml ! fun
+https://willmacaskill.substack.com/feed ! fun "~Will MacAskill"
+https://kalomaze.bearblog.dev/feed/ ! fun "~kalomaze"
+https://www.applieddivinitystudies.com/atom.xml ! fun
+https://www.astralcodexten.com/feed ! fun "~Scott Alexander"
+https://80000hours.org/latest/feed/ ! fun "~80k Hours"
+https://www.planned-obsolescence.org/feed ! fun "~Ajeya Cotra"
+https://asteriskmag.substack.com/feed ! fun
+https://cameronrwolfe.substack.com/feed ! fun "~Cameron Wolfe"
+https://importai.substack.com/feed ! fun "~Jack Clark"
+https://www.interconnects.ai/feed ! fun "~Nathan Lambert"
+https://magazine.sebastianraschka.com/feed ! fun "~Sebastian Raschka"
+
+https://pinecast.com/feed/forecast ! podcast
+https://feeds.transistor.fm/cheeky-pint-with-john-collison ! podcast "~Cheeky Pint"
+https://rss.libsyn.com/shows/137081/destinations/850607.xml ! podcast "~Tyler Cowen"
+https://feeds.transistor.fm/epoch-ai-after-hours ! podcast "~Epoch AI"
+https://anchor.fm/s/10fbee758/podcast/rss ! podcast "~SemiAnalysis"
+https://feeds.transistor.fm/80000-hours-podcast ! podcast "~80k Hours"
+https://anchor.fm/s/105947aa4/podcast/rss ! podcast "~Cursor"
+https://api.substack.com/feed/podcast/9157167.rss ! podcast "~Mechanize"
+
+https://www.youtube.com/feeds/videos.xml?channel_id=UCYO_jab_esuFRV4b17AJtAw ! youtube "~3Blue1Brown"
+https://www.youtube.com/feeds/videos.xml?channel_id=UC6YYHJzM6PhZ2Yey9BQiUaw ! youtube "~Cursor"
+https://www.youtube.com/feeds/videos.xml?channel_id=UCCnH8mxROOqii6gesCmMRzQ ! youtube "~Sasha Rush"
+https://www.youtube.com/feeds/videos.xml?channel_id=UCkQS_dP6GJTmYnMlox-YiKQ ! youtube "~Jia-Bin Huang"
+https://www.youtube.com/feeds/videos.xml?channel_id=UCXUPKJO5MZQN11PqgIvyuvQ ! youtube "~Andrej Karpathy"
+https://www.youtube.com/feeds/videos.xml?channel_id=UConVfxXodg78Tzh5nNu85Ew ! youtube "~Welch Labs"
+https://www.youtube.com/feeds/videos.xml?channel_id=UCMUy_WsUIYbM_hKR9drb9dA ! youtube "~Julia Turc"
+https://www.youtube.com/feeds/videos.xml?channel_id=UCMhPRKnK8S_ruoGSt3vm1sQ ! youtube "~Interconnects AI"
+https://www.youtube.com/feeds/videos.xml?channel_id=UCayQjCHzSnqPszcHNMmfkSg ! youtube "~Nathan Lambert"
+
+"exec:/Users/filip/Developer/dotfiles/newsboat/.newsboat/generate-feeds.py openai-research-models" ! institutions "~OpenAI Research"
+https://alignment.openai.com/rss.xml ! institutions "~OpenAI Alignment"
+https://transformer-circuits.pub/feed.xml ! institutions "~Transformer Circuits"
+"exec:/Users/filip/Developer/dotfiles/newsboat/.newsboat/generate-feeds.py anthropic-research" ! institutions "~Anthropic Research"
+"exec:/Users/filip/Developer/dotfiles/newsboat/.newsboat/generate-feeds.py anthropic-news" ! institutions "~Anthropic News"
+"exec:/Users/filip/Developer/dotfiles/newsboat/.newsboat/generate-feeds.py anthropic-engineering" ! institutions "~Anthropic Engineering"
+https://deepmind.google/blog/rss.xml ! institutions "~Google DeepMind"
+https://blog.redwoodresearch.org/feed ! institutions
+https://metr.substack.com/feed ! institutions
+https://blog.eleuther.ai/index.xml ! institutions "~EleutherAI"

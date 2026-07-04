@@ -7,5 +7,5 @@ keybind = shift+enter=text:\x1b\r
 maximize = true
 mouse-hide-while-typing = true
 
-theme = Rose Pine Moon
-background = #000000
+theme = light:Rose Pine Dawn, dark:Rose Pine Moon
+# background = #000000
