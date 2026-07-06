@@ -1,0 +1,4 @@
+export GTK_THEME=Adwaita:dark
+
+xset r rate 200 60
+feh --randomize --bg-fill "$HOME/docs/wallpapers"/*

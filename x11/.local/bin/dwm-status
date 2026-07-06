@@ -1,0 +1,85 @@
+#!/bin/sh
+
+battery_status() {
+	for bat in /sys/class/power_supply/BAT*; do
+		[ -e "$bat" ] || continue
+
+		capacity=$(cat "$bat/capacity" 2>/dev/null) || continue
+		status=$(cat "$bat/status" 2>/dev/null)
+
+		case "$status" in
+			Charging) icon="+" ;;
+			Discharging) icon="-" ;;
+			Full) icon="=" ;;
+			*) icon="" ;;
+		esac
+
+		printf 'Bat %s%%%s' "$capacity" "$icon"
+		return
+	done
+
+	printf 'Bat n/a'
+}
+
+wifi_status() {
+	station=$(
+		iwctl station list 2>/dev/null |
+		awk '
+			{ gsub(/\033\[[0-9;]*m/, "") }
+			$2 ~ /^(connected|connecting|disconnected)$/ { print $1; exit }
+		'
+	)
+
+	[ -n "$station" ] || {
+		printf 'WiFi n/a'
+		return
+	}
+
+	iwctl station "$station" show 2>/dev/null |
+	awk '
+		{ gsub(/\033\[[0-9;]*m/, "") }
+
+		$1 == "State" { state = $2 }
+
+		$1 == "RSSI" { rssi = $2 "dBm" }
+
+		END {
+			if (state == "connected") {
+				if (rssi != "")
+					printf "WiFi %s", rssi
+				else
+					printf "WiFi connected"
+			} else if (state != "") {
+				printf "WiFi %s", state
+			} else {
+				printf "WiFi n/a"
+			}
+		}
+	'
+}
+
+volume_status() {
+	wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null |
+	awk '
+		$1 == "Volume:" { vol = $2; muted = ($3 == "[MUTED]") }
+
+		END {
+			if (vol == "")
+				printf "Vol n/a"
+			else if (muted)
+				printf "Vol muted"
+			else
+				printf "Vol %d%%", vol * 100 + 0.5
+		}
+	'
+}
+
+# SIGUSR1 interrupts the sleep for an immediate refresh (e.g. from volume keys)
+trap : USR1
+
+while :; do
+	xprop -root -set WM_NAME " $(LC_TIME=C date '+%a %b %d %H:%M') | $(wifi_status) | $(volume_status) | $(battery_status)" >/dev/null 2>&1
+	sleep 30 &
+	wait $!
+	kill $! 2>/dev/null
+done
