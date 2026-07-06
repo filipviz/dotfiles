@@ -4,6 +4,7 @@ stty stop undef  # Disable ctrl-s to freeze terminal.
 setopt interactive_comments
 
 # history
+HISTFILE="$HOME/.zsh_history"
 HISTSIZE=50000
 SAVEHIST=50000
 setopt share_history
@@ -23,6 +24,9 @@ alias ls='ls --color=auto'
 alias cb='xclip -selection clipboard'
 alias pb='xclip -selection clipboard -out'
 alias dl-audio="yt-dlp -f 140 --embed-chapters"
+alias rs='redshift -P -O'
+alias cb='xclip -selection clipboard'
+alias pb='xclip -selection clipboard -out'
 alias lg="lazygit"
 export LG_CONFIG_FILE="$HOME/.config/lazygit/config.yml"
 
@@ -32,11 +36,13 @@ export GPG_TTY=$(tty)
 autoload -U compinit
 zstyle ':completion:*' menu select
 zmodload zsh/complist
-if [[ ! -f ${ZDOTDIR:-$HOME}/.zcompdump ]]; then compinit -i
-else
+# Reuse the completion dump if it's less than a day old; else rebuild it.
+# (compinit leaves an unchanged dump's mtime alone, hence the touch.)
+if [[ -n $(find ${ZDOTDIR:-$HOME}/.zcompdump -mmin -1440 2>/dev/null) ]]; then
   compinit -C
+else
+  compinit -i && touch ${ZDOTDIR:-$HOME}/.zcompdump
 fi
-# compinit
 _comp_options+=(globdots)		# Include hidden files.
 
 # vi mode
@@ -63,6 +69,10 @@ zle-line-init() {
     echo -ne "\e[5 q"
 }
 zle -N zle-line-init
+
+# Reset to block cursor before running commands, so TUIs that don't set
+# a cursor style (claude, nnn, lazygit, ...) start with the block.
+preexec() { echo -ne '\e[1 q' }
 
 # fzf bindings and helper
 if command -v fzf &> /dev/null; then
@@ -99,7 +109,7 @@ n ()
     }
 }
 # Launch nnn with ctrl-o:
-bindkey -s '^o' 'n\n'
+bindkey -s '^o' '^un\n'
 
 # Edit line in vim with ctrl-e:
 autoload edit-command-line; zle -N edit-command-line

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from email.utils import format_datetime, parsedate_to_datetime
@@ -10,6 +11,7 @@ from html import unescape
 from pathlib import Path
 from typing import Callable
 import fcntl
+import gzip
 import hashlib
 import json
 import sys
@@ -23,29 +25,12 @@ import xml.etree.ElementTree as ET
 ANTHROPIC_SITEMAP_URL = "https://www.anthropic.com/sitemap.xml"
 OPENAI_RSS_URL = "https://openai.com/news/rss.xml"
 BASE_DIR = Path(__file__).resolve().parent
-OUTPUT_DIR = BASE_DIR / "generated"
-CACHE_DIR = OUTPUT_DIR / "http-cache"
+CACHE_DIR = BASE_DIR / "generated" / "http-cache"
 CACHE_TTL_SECONDS = 15 * 60
 MAX_ITEMS = 300
 
 ANTHROPIC_HOST = "www.anthropic.com"
 ANTHROPIC_LISTING_PATHS = ("/news", "/research", "/engineering")
-SAFETY_KEYWORDS = (
-    "red-team",
-    "red-teaming",
-    "jailbreak",
-    "safeguard",
-    "misuse",
-    "exploit",
-    "cyber",
-    "biosecurity",
-    "responsible-scaling",
-    "constitutional",
-    "safety",
-    "eval",
-    "threat",
-    "vulnerability",
-)
 OPENAI_MODEL_NAME_RE = re.compile(
     r"\b("
     r"gpt[- ]?(?:\d|oss|rosalind)|"
@@ -97,7 +82,6 @@ class FeedItem:
 class FeedSpec:
     feed_id: str
     source: str
-    filename: str
     title: str
     link: str
     description: str
@@ -111,33 +95,9 @@ def main(argv: list[str] | None = None) -> None:
     if len(argv) == 1 and argv[0] in {spec.feed_id for spec in specs}:
         write_feed_to_stdout(argv[0], specs)
         return
-    if (
-        len(argv) == 2
-        and argv[0] == "--feed"
-        and argv[1] in {spec.feed_id for spec in specs}
-    ):
-        write_feed_to_stdout(argv[1], specs)
-        return
-    if argv:
-        valid_feeds = ", ".join(spec.feed_id for spec in specs)
-        raise SystemExit(
-            f"usage: {Path(sys.argv[0]).name} [--feed FEED]\nfeeds: {valid_feeds}"
-        )
 
-    generate_feed_files(specs)
-
-
-def generate_feed_files(specs: tuple[FeedSpec, ...]) -> None:
-    items_by_source: dict[str, list[FeedItem]] = {}
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-    for spec in specs:
-        if spec.source not in items_by_source:
-            items_by_source[spec.source] = fetch_items_for_source(spec.source)
-        items = select_items(items_by_source[spec.source], spec)
-        output_path = OUTPUT_DIR / spec.filename
-        write_rss_file(spec, items, output_path)
-        print(f"Wrote {len(items):3d} items to {output_path}")
+    valid_feeds = ", ".join(spec.feed_id for spec in specs)
+    raise SystemExit(f"usage: {Path(sys.argv[0]).name} FEED\nfeeds: {valid_feeds}")
 
 
 def write_feed_to_stdout(feed_id: str, specs: tuple[FeedSpec, ...]) -> None:
@@ -152,25 +112,14 @@ def feed_specs() -> tuple[FeedSpec, ...]:
         FeedSpec(
             "anthropic-research",
             "anthropic",
-            "anthropic-research.xml",
             "Anthropic Research",
             "https://www.anthropic.com/research",
             "Anthropic research pages from the official sitemap.",
             lambda entry: has_path_prefix(entry.loc, "/research/"),
         ),
         FeedSpec(
-            "anthropic-safety-red-team",
-            "anthropic",
-            "anthropic-safety-red-team.xml",
-            "Anthropic Safety and Red Teaming",
-            "https://www.anthropic.com/research",
-            "Anthropic safety, misuse, eval, and red-team pages from the official sitemap.",
-            is_safety_or_red_team,
-        ),
-        FeedSpec(
             "anthropic-news",
             "anthropic",
-            "anthropic-news.xml",
             "Anthropic News",
             "https://www.anthropic.com/news",
             "Anthropic news pages from the official sitemap.",
@@ -179,7 +128,6 @@ def feed_specs() -> tuple[FeedSpec, ...]:
         FeedSpec(
             "anthropic-engineering",
             "anthropic",
-            "anthropic-engineering.xml",
             "Anthropic Engineering",
             "https://www.anthropic.com/engineering",
             "Anthropic engineering pages from the official sitemap.",
@@ -188,7 +136,6 @@ def feed_specs() -> tuple[FeedSpec, ...]:
         FeedSpec(
             "openai-research-models",
             "openai",
-            "openai-research-models.xml",
             "OpenAI Research and Model Releases",
             "https://openai.com/news/",
             "OpenAI research posts and model-release posts from the official RSS feed.",
@@ -206,9 +153,24 @@ def fetch_items_for_source(source: str) -> list[FeedItem]:
 
 
 def fetch_anthropic_items() -> list[FeedItem]:
-    metadata = fetch_anthropic_metadata()
+    with ThreadPoolExecutor(max_workers=1 + len(ANTHROPIC_LISTING_PATHS)) as pool:
+        entries_future = pool.submit(fetch_anthropic_sitemap)
+        pages = list(
+            pool.map(
+                lambda path: fetch_text(f"https://{ANTHROPIC_HOST}{path}"),
+                ANTHROPIC_LISTING_PATHS,
+            )
+        )
+        entries = entries_future.result()
+
+    metadata: dict[str, PageMetadata] = {}
+    for path, html in zip(ANTHROPIC_LISTING_PATHS, pages):
+        metadata.update(parse_anthropic_embedded_posts(html))
+        if path == "/engineering":
+            metadata.update(parse_anthropic_engineering_cards(html))
+
     items: list[FeedItem] = []
-    for entry in fetch_anthropic_sitemap():
+    for entry in entries:
         slug = urlparse(entry.loc).path.rstrip("/").rsplit("/", 1)[-1]
         page_metadata = metadata.get(entry.loc) or metadata.get(slug)
         if page_metadata:
@@ -238,22 +200,12 @@ def fetch_anthropic_sitemap() -> list[SitemapEntry]:
     root = ET.fromstring(data)
     entries: list[SitemapEntry] = []
     for url_node in root:
-        loc = child_text(url_node, "loc")
+        loc = (url_node.findtext("{*}loc") or "").strip()
         if not loc:
             continue
-        lastmod = parse_lastmod(child_text(url_node, "lastmod"))
+        lastmod = parse_lastmod((url_node.findtext("{*}lastmod") or "").strip())
         entries.append(SitemapEntry(loc=loc, lastmod=lastmod))
     return entries
-
-
-def fetch_anthropic_metadata() -> dict[str, PageMetadata]:
-    metadata: dict[str, PageMetadata] = {}
-    for path in ANTHROPIC_LISTING_PATHS:
-        html = fetch_text(f"https://{ANTHROPIC_HOST}{path}")
-        metadata.update(parse_anthropic_embedded_posts(html))
-        if path == "/engineering":
-            metadata.update(parse_anthropic_engineering_cards(html))
-    return metadata
 
 
 def parse_anthropic_embedded_posts(html: str) -> dict[str, PageMetadata]:
@@ -377,24 +329,21 @@ def read_fresh_cache(cache_path: Path) -> bytes | None:
 def fetch_uncached_bytes(url: str) -> bytes:
     request = Request(
         url,
-        headers={"User-Agent": "newsboat-local-feed-generator/1.0"},
+        headers={
+            "User-Agent": "newsboat-local-feed-generator/1.0",
+            "Accept-Encoding": "gzip",
+        },
     )
     with urlopen(request, timeout=30) as response:
-        return response.read()
-
-
-def child_text(node: ET.Element, name: str) -> str:
-    for child in node:
-        if child.tag.rsplit("}", 1)[-1] == name:
-            return (child.text or "").strip()
-    return ""
+        data = response.read()
+    if response.headers.get("Content-Encoding", "").lower() == "gzip":
+        data = gzip.decompress(data)
+    return data
 
 
 def parse_lastmod(value: str) -> datetime:
     if not value:
         return datetime.now(UTC)
-    if value.endswith("Z"):
-        value = f"{value[:-1]}+00:00"
     return datetime.fromisoformat(value).astimezone(UTC)
 
 
@@ -419,20 +368,6 @@ def strip_tags(value: str) -> str:
 def has_path_prefix(loc: str, prefix: str) -> bool:
     parsed = urlparse(loc)
     return parsed.netloc == ANTHROPIC_HOST and parsed.path.startswith(prefix)
-
-
-def is_safety_or_red_team(entry: FeedItem) -> bool:
-    parsed = urlparse(entry.loc)
-    if parsed.netloc != ANTHROPIC_HOST:
-        return False
-    path = parsed.path.lower()
-    if not (
-        path.startswith("/research/")
-        or path.startswith("/news/")
-        or path.startswith("/engineering/")
-    ):
-        return False
-    return any(keyword in path for keyword in SAFETY_KEYWORDS)
 
 
 def is_openai_research_or_model_release(item: FeedItem) -> bool:
@@ -500,13 +435,6 @@ def rss_tree(spec: FeedSpec, items: list[FeedItem]) -> ET.ElementTree:
     tree = ET.ElementTree(rss)
     ET.indent(tree, space="  ")
     return tree
-
-
-def write_rss_file(spec: FeedSpec, items: list[FeedItem], output_path: Path) -> None:
-    tree = rss_tree(spec, items)
-    tmp_path = output_path.with_suffix(f"{output_path.suffix}.tmp")
-    tree.write(tmp_path, encoding="utf-8", xml_declaration=True)
-    tmp_path.replace(output_path)
 
 
 def write_rss_stream(spec: FeedSpec, items: list[FeedItem], stream: object) -> None:

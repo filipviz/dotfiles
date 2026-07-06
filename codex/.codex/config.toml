@@ -5,7 +5,6 @@ model_reasoning_effort = "xhigh"
 personality = "pragmatic"
 web_search = "live"
 
-approval_policy = "on-request"
 approvals_reviewer = "auto_review"
 
 sandbox_mode = "workspace-write"
@@ -13,50 +12,44 @@ file_opener = "none"
 project_doc_fallback_filenames = ["CLAUDE.md"]
 suppress_unstable_features_warning = true
 plan_mode_reasoning_effort = "xhigh"
-
-
-notify = ["/Users/filip/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
-service_tier = "default"
+notify = ["/home/f/.codex/notify-tmux.sh", "agent-turn-complete"]
+service_tier = "fast"
 
 [sandbox_workspace_write]
 network_access = true
-writable_roots = ["/Users/filip/.cache", "/Users/filip/.matplotlib"]
+writable_roots = ["/home/f/.cache", "/home/f/.matplotlib"]
 
 [features]
 memories = true
 prevent_idle_sleep = true
-mentions_v2 = true
-js_repl = false
 
 [tui]
 status_line = ["model-with-reasoning", "current-dir", "context-usage", "context-window-size", "five-hour-limit", "weekly-limit"]
 theme = "ansi"
+vim_mode_default = true
 
 [tui.model_availability_nux]
 "gpt-5.5" = 4
 
-[projects."/Users/filip"]
+[projects."/home/f"]
 trust_level = "trusted"
 
-[projects."/Users/filip/Developer/dotfiles"]
+[projects."/home/f/dev/dotfiles"]
 trust_level = "trusted"
 
-[projects."/Users/filip/Developer/utils"]
+[projects."/home/f/dev/utils"]
 trust_level = "trusted"
 
-[projects."/Users/filip/trustworthy-gradients"]
+[projects."/home/f/trustworthy-gradients"]
 trust_level = "trusted"
 
-[projects."/Users/filip/Developer/modded-nanogpt"]
+[projects."/home/f/dev/modded-nanogpt"]
 trust_level = "trusted"
 
-[projects."/Users/filip/Downloads"]
+[projects."/home/f/Downloads"]
 trust_level = "trusted"
 
-[projects."/Users/filip/Developer/filip-world"]
-trust_level = "trusted"
-
-[projects."/Users/filip/Documents/Codex/2026-06-27/i-have-a-vague-sense-of"]
+[projects."/home/f/dev/filip-world"]
 trust_level = "trusted"
 
 [plugins."documents@openai-primary-runtime"]
@@ -66,9 +59,6 @@ enabled = true
 enabled = true
 
 [plugins."presentations@openai-primary-runtime"]
-enabled = true
-
-[plugins."computer-use@openai-bundled"]
 enabled = true
 
 [plugins."pdf@openai-primary-runtime"]
@@ -83,96 +73,6 @@ enabled = true
 [plugins."template-creator@openai-primary-runtime"]
 enabled = true
 
-[marketplaces.openai-bundled]
-last_updated = "2026-07-04T02:00:22Z"
-source_type = "local"
-source = "/Users/filip/.codex/.tmp/bundled-marketplaces/openai-bundled"
-
-[marketplaces.openai-primary-runtime]
-last_updated = "2026-07-02T20:01:24Z"
-source_type = "local"
-source = "/Users/filip/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
-
 [notice]
 fast_default_opt_out = true
 hide_rate_limit_model_nudge = true
-
-[apps.asdk_app_6939e86417648191b7bda087d872685b]
-enabled = false
-
-[[skills.config]]
-path = "/Users/filip/.codex/skills/playwright-interactive/SKILL.md"
-enabled = false
-
-[[skills.config]]
-path = "/Users/filip/.codex/skills/playwright/SKILL.md"
-enabled = false
-
-[desktop]
-appearanceTheme = "system"
-appearanceLightCodeThemeId = "rose-pine"
-appearanceDarkCodeThemeId = "rose-pine"
-sansFontSize = 18
-codeFontSize = 16
-usePointerCursors = false
-mac-menu-bar-enabled = false
-followUpQueueMode = "steer"
-composerEnterBehavior = "enter"
-localeOverride = "en-US"
-preventSleepWhileRunning = true
-keepRemoteControlAwakeWhilePluggedIn = true
-
-[desktop.appearanceLightChromeTheme]
-accent = "#d7827e"
-contrast = 45
-ink = "#575279"
-opaqueWindows = false
-surface = "#faf4ed"
-
-[desktop.appearanceLightChromeTheme.fonts]
-code = '"Berkeley Mono"'
-ui = '"XCharter"'
-
-[desktop.appearanceLightChromeTheme.semanticColors]
-diffAdded = "#56949f"
-diffRemoved = "#797593"
-skill = "#907aa9"
-
-[desktop.appearanceDarkChromeTheme]
-accent = "#ea9a97"
-contrast = 45
-ink = "#e0def4"
-opaqueWindows = false
-surface = "#000000"
-
-[desktop.appearanceDarkChromeTheme.fonts]
-code = '"Berkeley Mono"'
-ui = '"XCharter"'
-
-[desktop.appearanceDarkChromeTheme.semanticColors]
-diffAdded = "#9ccfd8"
-diffRemoved = "#908caa"
-skill = "#c4a7e7"
-
-[desktop.open-in-target-preferences]
-global = "ghostty"
-
-[mcp_servers.node_repl]
-args = []
-command = "/Applications/Codex.app/Contents/Resources/cua_node/bin/node_repl"
-startup_timeout_sec = 120
-
-[mcp_servers.node_repl.env]
-NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS = "1000"
-NODE_REPL_NODE_MODULE_DIRS = "/Applications/Codex.app/Contents/Resources/cua_node/lib/node_modules"
-NODE_REPL_NODE_PATH = "/Applications/Codex.app/Contents/Resources/cua_node/bin/node"
-NODE_REPL_TRUSTED_CODE_PATHS = "/Users/filip/.codex"
-CODEX_HOME = "/Users/filip/.codex"
-NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "60e4902788f207f88fd09344dfeafe07769488bdb2924bbb12b322c3b9d2b999"
-BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
-NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER = "Control the in-app browser in conjunction with the Browser Plugin."
-NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME = "Control the Chrome browser in conjunction with the Chrome Plugin. Prefer this method of controlling Chrome over alternatives (such as Computer Use) unless the user explicitly mentions an alternative."
-BROWSER_USE_CODEX_APP_BUILD_FLAVOR = "prod"
-BROWSER_USE_CODEX_APP_VERSION = "26.623.101652"
-CODEX_CLI_PATH = "/Applications/Codex.app/Contents/Resources/codex"
-

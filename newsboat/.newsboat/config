@@ -1,13 +1,14 @@
-browser "open %u"
+browser "xdg-open %u"
 text-width 80
-reload-threads 8
+reload-threads 16
 prepopulate-query-feeds yes
-bookmark-cmd "/Users/filip/Developer/dotfiles/newsboat/.newsboat/bookmark-url"
+bookmark-cmd "/home/f/dev/dotfiles/newsboat/.newsboat/bookmark-url"
 bookmark-autopilot yes
 
-# refresh-on-startup yes
+refresh-on-startup yes
+notify-beep yes
 cleanup-on-quit yes
-download-timeout 10
+download-timeout 20
 download-retries 2
 error-log "~/.newsboat/error.log"
 

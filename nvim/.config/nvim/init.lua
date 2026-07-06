@@ -180,7 +180,7 @@ require("lazy").setup({
 				require("rose-pine").setup({
 					variant = "moon",
 					styles = { italic = false },
-					-- palette = { moon = { base = "#000000" } },
+					palette = { moon = { base = "#000000" } },
 				})
 				vim.cmd.colorscheme("rose-pine")
 				-- vim.cmd.colorscheme("rose-pine-dawn")
