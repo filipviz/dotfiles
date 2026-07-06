@@ -1,8 +1,12 @@
 #!/bin/sh
 # Codex notify hook: forward turn-completion to the shared tmux/system
-# notifier. Codex invokes the configured notify program with one JSON argument.
-case "${1:-}" in
+# notifier. Codex appends one JSON argument after any static args configured
+# in notify (config.toml), so the payload is always the last argument.
+
+json=""
+for json; do :; done
+case "$json" in
   *agent-turn-complete*)
-    sh "$HOME/.claude/tmux-notify.sh" stop codex </dev/null
+    printf '%s' "$json" | sh "$HOME/.claude/tmux-notify.sh" stop codex
     ;;
 esac

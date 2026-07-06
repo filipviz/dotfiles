@@ -2,3 +2,8 @@ export GTK_THEME=Adwaita:dark
 
 xset r rate 200 60
 feh --randomize --bg-fill "$HOME/docs/wallpapers"/*
+
+# Tame the pcspkr beep: the codec's Beep amp defaults to a deafening 0dB.
+# (Its level can't usefully track the volume dial -- the amp's response is
+# too nonlinear -- but Master mute does silence it.)
+amixer -c 0 sset Beep 4 on >/dev/null

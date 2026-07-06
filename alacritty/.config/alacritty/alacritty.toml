@@ -18,9 +18,8 @@ history = 50_000
 hide_when_typing = true
 
 [bell]
-# duration = 200
-# color = "#ff0000"
-# 750 Hz / 125 ms matches the Linux console (tty) bell
+# 750 Hz / 125 ms matches the Linux console (tty) bell. The beep level is
+# fixed (see the Beep amp note in x11/.xprofile), but mute silences it.
 command = { program = "beep", args = ["-f", "750", "-l", "125"] }
 
 [[keyboard.bindings]]
