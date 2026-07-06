@@ -1,0 +1,24 @@
+# Rose Pine Moon accents on black, to match alacritty/nvim.
+[global]
+    font = Berkeley Mono 10
+    frame_width = 2
+    gap_size = 6
+    corner_radius = 0
+
+[urgency_low]
+    background = "#000000"
+    foreground = "#908caa"
+    frame_color = "#44415a"
+    timeout = 5
+
+[urgency_normal]
+    background = "#000000"
+    foreground = "#e0def4"
+    frame_color = "#ea9a97"
+    timeout = 8
+
+[urgency_critical]
+    background = "#000000"
+    foreground = "#e0def4"
+    frame_color = "#eb6f92"
+    timeout = 0
