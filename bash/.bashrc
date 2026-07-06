@@ -8,7 +8,7 @@ PS1='[\u@\h \W]\$ '
 export EDITOR="nvim"
 export VISUAL="nvim"
 export PAGER="less"
-export PATH="$HOME/.scripts:$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 
 # Disable ctrl-s terminal freeze (nvim uses <C-s> for LSP signature help).
 # 2>/dev/null: this file is also sourced by non-interactive ssh shells.

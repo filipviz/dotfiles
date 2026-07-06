@@ -352,7 +352,7 @@ link_config() {
 
 link_dotfiles() {
   log "Linking portable dotfiles..."
-  link_config keep "$DOTFILES_DIR/scripts/.scripts" "$HOME/.scripts"
+  link_config keep "$DOTFILES_DIR/scripts/.local/bin/gpu-setup.sh" "$HOME/.local/bin/gpu-setup.sh"
   link_config replace "$DOTFILES_DIR/bash/.bashrc" "$HOME/.bashrc"
   link_config keep "$DOTFILES_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf"
   link_config keep "$DOTFILES_DIR/nvim/.config/nvim" "$HOME/.config/nvim"
@@ -370,7 +370,7 @@ verify_setup() {
   log "Verifying setup..."
   require_command tmux git lazygit delta nvim tree-sitter rg fd curl nnn fzf jq uv codex claude bwrap
   test -d "$DOTFILES_DIR/.git"
-  test -x "$HOME/.scripts/gpu-setup.sh"
+  test -x "$HOME/.local/bin/gpu-setup.sh"
   test -L "$HOME/.bashrc"
   test -e "$HOME/.tmux.conf"
   test -e "$HOME/.config/nvim/init.lua"
