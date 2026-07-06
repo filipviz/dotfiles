@@ -94,12 +94,12 @@ https://www.youtube.com/feeds/videos.xml?channel_id=UCMUy_WsUIYbM_hKR9drb9dA ! y
 https://www.youtube.com/feeds/videos.xml?channel_id=UCMhPRKnK8S_ruoGSt3vm1sQ ! youtube "~Interconnects AI"
 https://www.youtube.com/feeds/videos.xml?channel_id=UCayQjCHzSnqPszcHNMmfkSg ! youtube "~Nathan Lambert"
 
-"exec:/home/f/dev/dotfiles/newsboat/.newsboat/generate-feeds.py openai-research-models" ! institutions "~OpenAI Research"
+"exec:/home/f/.config/newsboat/generate-feeds.py openai-research-models" ! institutions "~OpenAI Research"
 https://alignment.openai.com/rss.xml ! institutions "~OpenAI Alignment"
 https://transformer-circuits.pub/feed.xml ! institutions "~Transformer Circuits"
-"exec:/home/f/dev/dotfiles/newsboat/.newsboat/generate-feeds.py anthropic-research" ! institutions "~Anthropic Research"
-"exec:/home/f/dev/dotfiles/newsboat/.newsboat/generate-feeds.py anthropic-news" ! institutions "~Anthropic News"
-"exec:/home/f/dev/dotfiles/newsboat/.newsboat/generate-feeds.py anthropic-engineering" ! institutions "~Anthropic Engineering"
+"exec:/home/f/.config/newsboat/generate-feeds.py anthropic-research" ! institutions "~Anthropic Research"
+"exec:/home/f/.config/newsboat/generate-feeds.py anthropic-news" ! institutions "~Anthropic News"
+"exec:/home/f/.config/newsboat/generate-feeds.py anthropic-engineering" ! institutions "~Anthropic Engineering"
 https://deepmind.google/blog/rss.xml ! institutions "~Google DeepMind"
 https://blog.redwoodresearch.org/feed ! institutions
 https://metr.substack.com/feed ! institutions

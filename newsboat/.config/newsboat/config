@@ -2,7 +2,7 @@ browser "xdg-open %u"
 text-width 80
 reload-threads 16
 prepopulate-query-feeds yes
-bookmark-cmd "/home/f/dev/dotfiles/newsboat/.newsboat/bookmark-url"
+bookmark-cmd "/home/f/.config/newsboat/bookmark-url"
 bookmark-autopilot yes
 
 refresh-on-startup yes
@@ -10,7 +10,7 @@ notify-beep yes
 cleanup-on-quit yes
 download-timeout 20
 download-retries 2
-error-log "~/.newsboat/error.log"
+error-log "~/.local/share/newsboat/error.log"
 
 feedlist-title-format "Feeds (%u/%t unread)"
 articlelist-title-format "%T (%u/%t unread)"
