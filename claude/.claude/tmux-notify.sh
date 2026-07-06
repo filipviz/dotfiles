@@ -50,15 +50,30 @@ notify_system() {
   command -v notify-send >/dev/null 2>&1 && notify-send "$1" "$2" >/dev/null 2>&1 || true
 }
 
+# dwm tag (1-based) of the terminal window showing this session: tmux client
+# pid -> WINDOWID from its environment -> _NET_WM_DESKTOP, which our patched
+# dwm publishes. Prints nothing if any link in the chain is missing.
+dwm_tag() {
+  pid="$(tmux list-clients -t "$(pane_fmt '#{session_id}')" -F '#{client_pid}' 2>/dev/null | head -n 1)"
+  [ -n "$pid" ] || return 0
+  wid="$(tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | sed -n 's/^WINDOWID=//p')"
+  [ -n "$wid" ] || return 0
+  xprop -id "$wid" -notype _NET_WM_DESKTOP 2>/dev/null |
+    awk '$3 ~ /^[0-9]+$/ { print $3 + 1 }'
+}
+
 case "$label" in
   claude) app="Claude" ;;
   codex) app="Codex" ;;
   *) app="$label" ;;
 esac
 
-loc=""
-in_tmux && loc="$(pane_fmt '#{session_name}:#{window_index}.#{pane_index}')"
-title="$app${loc:+ $loc}"
+loc="" tag=""
+if in_tmux; then
+  loc="$(pane_fmt '#{session_name}:#{window_index}.#{pane_index}')"
+  tag="$(dwm_tag)"
+fi
+title="$app${loc:+ $loc}${tag:+ · tag $tag}"
 
 case "$event" in
   prompt)
