@@ -21,8 +21,6 @@ PROMPT='%F{green}%*%f %F{blue}%~%f %F{red}${vcs_info_msg_0_}%f$ '
 
 # Miscellaneous setup.
 alias ls='ls --color=auto'
-alias cb='xclip -selection clipboard'
-alias pb='xclip -selection clipboard -out'
 alias dl-audio="yt-dlp -f 140 --embed-chapters"
 alias rs='redshift -P -O'
 alias cb='xclip -selection clipboard'
