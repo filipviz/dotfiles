@@ -39,7 +39,7 @@ ring_bell() {
 # True when the pane is on-screen in an attached client whose terminal window
 # has focus, i.e. the user is actually looking at it and a system notification
 # would be noise. Focus tracking needs the terminal to send focus events
-# (Ghostty does) and tmux >= 3.5; older tmux fails the grep and we just notify.
+# and tmux >= 3.5; older tmux fails the grep and we just notify.
 pane_visible() {
   in_tmux || return 1
   [ "$(pane_fmt '#{&&:#{pane_active},#{&&:#{window_active},#{session_attached}}}')" = 1 ] || return 1
@@ -47,19 +47,7 @@ pane_visible() {
 }
 
 notify_system() {
-  if [ "$(uname)" = Darwin ]; then
-    /usr/bin/osascript -e "display notification \"$2\" with title \"$1\"" >/dev/null 2>&1 || true
-  elif in_tmux; then
-    # OSC 777 desktop notification, wrapped in a tmux passthrough sequence so
-    # it reaches the outer terminal. Ghostty shows these natively, even when
-    # the pane lives on a remote host across SSH.
-    pane_tty="$(pane_fmt '#{pane_tty}')"
-    if [ -n "$pane_tty" ] && [ -w "$pane_tty" ]; then
-      printf '\033Ptmux;\033\033]777;notify;%s;%s\033\033\\\033\\' "$1" "$2" > "$pane_tty"
-    fi
-  else
-    printf '\033]777;notify;%s;%s\033\\' "$1" "$2" > /dev/tty 2>/dev/null || true
-  fi
+  command -v notify-send >/dev/null 2>&1 && notify-send "$1" "$2" >/dev/null 2>&1 || true
 }
 
 case "$label" in

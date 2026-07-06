@@ -5,5 +5,4 @@ export PAGER="less"
 export CLAUDE_CODE_NO_FLICKER=1
 export CLAUDE_CODE_SUBAGENT_MODEL="claude-sonnet-5"
 
-export GOPATH="$HOME/Developer/go"
-export PATH="$GOPATH/bin:$HOME/.scripts:$HOME/.local/bin:$PATH"
+export PATH="$HOME/.scripts:$HOME/.local/bin:$PATH"

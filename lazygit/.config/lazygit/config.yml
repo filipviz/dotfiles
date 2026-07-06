@@ -1,5 +1,3 @@
-# Loaded via LG_CONFIG_FILE (set in zsh/.zshrc); macOS would otherwise look in
-# ~/Library/Application Support/lazygit.
 git:
   pagers:
     - colorArg: always

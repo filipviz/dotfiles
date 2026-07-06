@@ -28,7 +28,6 @@ alias rs='redshift -P -O'
 alias cb='xclip -selection clipboard'
 alias pb='xclip -selection clipboard -out'
 alias lg="lazygit"
-export LG_CONFIG_FILE="$HOME/.config/lazygit/config.yml"
 
 export GPG_TTY=$(tty)
 
@@ -115,15 +114,5 @@ bindkey -s '^o' '^un\n'
 autoload edit-command-line; zle -N edit-command-line
 bindkey '^e' edit-command-line
 
-# Load zsh-syntax-highlighting
-for zsh_syntax_highlighting in \
-	/opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
-	/usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
-	/usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-do
-	if [[ -r "$zsh_syntax_highlighting" ]]; then
-		source "$zsh_syntax_highlighting"
-		break
-	fi
-done
-unset zsh_syntax_highlighting
+# Load zsh-syntax-highlighting (must be last)
+source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
