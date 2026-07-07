@@ -27,6 +27,27 @@ alias cb='xclip -selection clipboard'
 alias pb='xclip -selection clipboard -out'
 alias lg="lazygit"
 
+# Dictionary lookup via sdcv (StarDict dicts in ~/.local/share/stardict/dic).
+# Several dicts store entries as raw HTML (some with multi-line style/script
+# blocks); strip it for terminal reading. Plain-text dicts pass through.
+dict() {
+  sdcv -n -c "$@" 2>/dev/null \
+    | perl -CS -0777 -pe '
+        s#<style[^>]*>.*?</style>##gs;
+        s#<script[^>]*>.*?</script>##gs;
+        s#<br ?/?>#\n#g;
+        s#</(?:p|li|ol|ul|div|h[1-6])>#\n#g;
+        s#<li>#  • #g;
+        s#<[^>]*>##g;
+        s#&lt;#<#g; s#&gt;#>#g; s#&quot;#"#g; s#&nbsp;# #g;
+        s#&\#(\d+);#chr($1)#ge; s#&\#x([0-9a-fA-F]+);#chr(hex($1))#ge;
+        s#&amp;#&#g;
+        s#^\s*show full / hide\s*$##gm;  # collapse-toggle links in Smith dicts
+        s#\n{3,}#\n\n#g;
+      ' \
+    | less -FRX
+}
+
 export GPG_TTY=$(tty)
 
 # Basic auto/tab complete:

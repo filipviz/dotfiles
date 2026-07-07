@@ -6,7 +6,7 @@ target:
 
 ```sh
 cd ~/dev/dotfiles
-stow -t "$HOME" alacritty bash claude codex dunst dwm git lazygit newsboat nvim scripts tmux x11 zsh
+stow -t "$HOME" alacritty bash claude codex dunst dwm git lazygit newsboat nvim scripts sdcv tmux x11 zsh
 ```
 
 Notes:
@@ -30,6 +30,9 @@ Notes:
   linked into place on freshly rented GPU instances by
   `scripts/.local/bin/gpu-setup.sh`, which `gpu-provision.sh` uploads
   and runs.
+- `sdcv/` holds only the result-ordering file for the `dict` function in
+  `.zshrc`; the StarDict dictionaries themselves live in
+  `~/.local/share/stardict/dic`, outside the repo.
 - `bash/` is for remote hosts; the local shell is zsh.
 - macOS support (ghostty, brew in `.zprofile`, the OCR-screenshot
   script, per-OS fallbacks) was removed in the commit labeled
