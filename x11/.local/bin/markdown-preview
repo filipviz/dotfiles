@@ -1,0 +1,65 @@
+#!/bin/sh
+
+set -eu
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT HUP INT TERM
+
+markdown=$tmpdir/clipboard.md
+normalized=$tmpdir/normalized.md
+html=$tmpdir/preview.html
+pdf=$tmpdir/preview.pdf
+log=$tmpdir/pandoc.log
+tex_cache=${XDG_CACHE_HOME:-$HOME/.cache}/texlive
+font_fallback=${XDG_DATA_HOME:-$HOME/.local/share}/markdown-preview/font-fallback.tex
+
+mkdir -p "$tex_cache"
+
+if ! xclip -selection clipboard -out >"$markdown" 2>/dev/null || [ ! -s "$markdown" ]; then
+	notify-send --urgency=critical "Markdown preview" "The clipboard does not contain text."
+	exit 1
+fi
+
+if [ ! -r "$font_fallback" ]; then
+	notify-send --urgency=critical "Markdown preview failed" \
+		"Font fallback configuration not found: $font_fallback"
+	exit 1
+fi
+
+if ! python3 -c \
+	'import html, sys; sys.stdout.write(html.unescape(sys.stdin.read()))' \
+	<"$markdown" >"$normalized" 2>"$log"
+then
+	message=$(tail -n 8 "$log")
+	notify-send --urgency=critical "Markdown preview failed" \
+		"${message:-Could not normalize the clipboard text.}"
+	exit 1
+fi
+
+if ! pandoc \
+	--from=markdown+tex_math_single_backslash \
+	--to=html \
+	--mathml \
+	--output="$html" \
+	"$normalized" 2>"$log"
+then
+	message=$(tail -n 8 "$log")
+	notify-send --urgency=critical "Markdown preview failed" \
+		"${message:-Pandoc could not parse the clipboard.}"
+	exit 1
+fi
+
+if ! env TEXMFCACHE="$tex_cache" TEXMFVAR="$tex_cache" pandoc \
+	--from=html \
+	--pdf-engine=lualatex \
+	--include-in-header="$font_fallback" \
+	--output="$pdf" \
+	"$html" 2>"$log"
+then
+	message=$(tail -n 8 "$log")
+	notify-send --urgency=critical "Markdown preview failed" \
+		"${message:-Pandoc could not convert the clipboard.}"
+	exit 1
+fi
+
+mupdf "$pdf"

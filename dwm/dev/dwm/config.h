@@ -9,15 +9,16 @@ static const int showbar            = 1;        /* 0 means no bar */
 static const int topbar             = 1;        /* 0 means bottom bar */
 static const char *fonts[]          = { "Berkeley Mono:size=12", "monospace:size=10" };
 static const char dmenufont[]       = "Berkeley Mono:size=12";
-static const char col_gray1[]       = "#222222";
-static const char col_gray2[]       = "#444444";
-static const char col_gray3[]       = "#bbbbbb";
-static const char col_gray4[]       = "#eeeeee";
-static const char col_cyan[]        = "#005577";
+/* rose pine moon, with terminal's #000000 background */
+static const char col_bg[]          = "#000000";
+static const char col_overlay[]     = "#393552";
+static const char col_subtle[]      = "#908caa";
+static const char col_text[]        = "#e0def4";
+static const char col_pine[]        = "#3e8fb0";
 static const char *colors[][3]      = {
-	/*               fg         bg         border   */
-	[SchemeNorm] = { col_gray3, col_gray1, col_gray2 },
-	[SchemeSel]  = { col_gray4, col_cyan,  col_cyan  },
+	/*               fg          bg        border      */
+	[SchemeNorm] = { col_text,   col_bg,   col_overlay },
+	[SchemeSel]  = { col_bg,     col_pine, col_pine    },
 };
 
 /* tagging */
@@ -60,11 +61,13 @@ static const Layout layouts[] = {
 
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
-static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
+static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_bg, "-nf", col_text, "-sb", col_pine, "-sf", col_bg, NULL };
+static const char *screenshotcmd[] = { "screenshot-selection", NULL };
 static const char *termcmd[]  = { "alacritty", NULL };
 
 static const Key keys[] = {
 	/* modifier                     key        function        argument */
+	{ 0,                            XK_Insert, spawn,          {.v = screenshotcmd } },
 	{ MODKEY,                       XK_p,      spawn,          {.v = dmenucmd } },
 	{ MODKEY|ShiftMask,             XK_Return, spawn,          {.v = termcmd } },
 	{ 0,              XF86XK_AudioRaiseVolume, spawn,          SHCMD("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+; pkill -USR1 -f dwm-status") },

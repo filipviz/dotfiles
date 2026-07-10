@@ -1,6 +1,6 @@
 #:schema https://developers.openai.com/codex/config-schema.json
 
-model = "gpt-5.5"
+model = "gpt-5.6-sol"
 model_reasoning_effort = "xhigh"
 personality = "pragmatic"
 web_search = "live"
@@ -13,7 +13,7 @@ project_doc_fallback_filenames = ["CLAUDE.md"]
 suppress_unstable_features_warning = true
 plan_mode_reasoning_effort = "xhigh"
 notify = ["/home/f/.codex/notify-tmux.sh", "agent-turn-complete"]
-service_tier = "fast"
+service_tier = "default"
 
 [sandbox_workspace_write]
 network_access = true
@@ -30,6 +30,7 @@ vim_mode_default = true
 
 [tui.model_availability_nux]
 "gpt-5.5" = 4
+"gpt-5.6-sol" = 4
 
 [projects."/home/f"]
 trust_level = "trusted"
@@ -40,18 +41,9 @@ trust_level = "trusted"
 [projects."/home/f/dev/utils"]
 trust_level = "trusted"
 
-[projects."/home/f/trustworthy-gradients"]
-trust_level = "trusted"
-
-[projects."/home/f/dev/modded-nanogpt"]
-trust_level = "trusted"
-
-[projects."/home/f/Downloads"]
-trust_level = "trusted"
-
-[projects."/home/f/dev/filip-world"]
-trust_level = "trusted"
-
 [notice]
 fast_default_opt_out = true
 hide_rate_limit_model_nudge = true
+
+[mcp_servers.openaiDeveloperDocs]
+url = "https://developers.openai.com/mcp"

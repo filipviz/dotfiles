@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -eu
+
+screenshot=$(mktemp --suffix=.png "${TMPDIR:-/tmp}/screenshot.XXXXXX")
+trap 'rm -f "$screenshot"' EXIT HUP INT TERM
+
+scrot --select --silent --overwrite --file "$screenshot"
+xclip -selection clipboard -target image/png -in "$screenshot"

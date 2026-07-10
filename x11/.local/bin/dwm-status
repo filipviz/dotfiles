@@ -74,11 +74,30 @@ volume_status() {
 	'
 }
 
+weather_station=KMMU  # nearest NWS station; to change: api.weather.gov/points/<lat>,<lon> -> observationStations
+weather_cache=${XDG_CACHE_HOME:-$HOME/.cache}/dwm-status-weather
+
+weather_status() {
+	# NWS observations update ~hourly; refresh in the background when stale
+	if ! find "$weather_cache" -mmin -20 2>/dev/null | grep -q .; then
+		curl -sf --max-time 10 \
+			-H 'User-Agent: dwm-status (f@filip.world)' \
+			"https://api.weather.gov/stations/$weather_station/observations/latest" |
+		jq -r '.properties.temperature.value // empty' |
+		awk 'NF { printf "%.0f°F", $1 * 9 / 5 + 32; ok = 1 } END { exit !ok }' \
+			>"$weather_cache.new" && mv "$weather_cache.new" "$weather_cache" &
+	fi
+
+	temp=$(cat "$weather_cache" 2>/dev/null)
+	printf '%s' "${temp:-Temp n/a}"
+}
+
 # SIGUSR1 interrupts the sleep for an immediate refresh (e.g. from volume keys)
 trap : USR1
 
 while :; do
-	xprop -root -set WM_NAME " $(LC_TIME=C date '+%a %b %d %H:%M') | $(wifi_status) | $(volume_status) | $(battery_status)" >/dev/null 2>&1
+	# -format 8u stores UTF8_STRING; plain -set converts to Latin-1, which dwm mangles
+	xprop -root -format WM_NAME 8u -set WM_NAME " $(LC_TIME=C date '+%a %b %d %H:%M') | $(weather_status) | $(wifi_status) | $(volume_status) | $(battery_status)" >/dev/null 2>&1
 	sleep 30 &
 	wait $!
 	kill $! 2>/dev/null

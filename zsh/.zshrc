@@ -3,6 +3,8 @@ setopt autocd
 stty stop undef  # Disable ctrl-s to freeze terminal.
 setopt interactive_comments
 
+export CODEX_CODE_MODE_HOST_PATH=$HOME/.local/bin/codex-code-mode-host
+
 # history
 HISTFILE="$HOME/.zsh_history"
 HISTSIZE=50000
@@ -22,6 +24,7 @@ PROMPT='%F{green}%*%f %F{blue}%~%f %F{red}${vcs_info_msg_0_}%f$ '
 # Miscellaneous setup.
 alias ls='ls --color=auto'
 alias dl-audio="yt-dlp -f 140 --embed-chapters"
+alias ank="codex -C /home/f/dev/utils"
 alias rs='redshift -P -O'
 alias cb='xclip -selection clipboard'
 alias pb='xclip -selection clipboard -out'
@@ -33,16 +36,19 @@ alias lg="lazygit"
 dict() {
   sdcv -n -c "$@" 2>/dev/null \
     | perl -CS -0777 -pe '
+        use utf8; use Text::Wrap;
         s#<style[^>]*>.*?</style>##gs;
         s#<script[^>]*>.*?</script>##gs;
         s#<br ?/?>#\n#g;
-        s#</(?:p|li|ol|ul|div|h[1-6])>#\n#g;
+        s#</(?:p|li|ol|ul|div|h[1-6]|dt|dd)>#\n#g;
         s#<li>#  • #g;
         s#<[^>]*>##g;
         s#&lt;#<#g; s#&gt;#>#g; s#&quot;#"#g; s#&nbsp;# #g;
         s#&\#(\d+);#chr($1)#ge; s#&\#x([0-9a-fA-F]+);#chr(hex($1))#ge;
         s#&amp;#&#g;
         s#^\s*show full / hide\s*$##gm;  # collapse-toggle links in Smith dicts
+        $Text::Wrap::columns = 80;
+        s#^(.{80,})$#wrap("", "", $1)#gme;
         s#\n{3,}#\n\n#g;
       ' \
     | less -FRX
@@ -135,3 +141,9 @@ bindkey '^e' edit-command-line
 
 # Load zsh-syntax-highlighting (must be last)
 source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+
+# >>> grok installer >>>
+export PATH="$HOME/.grok/bin:$PATH"
+fpath=(~/.grok/completions/zsh $fpath)
+autoload -Uz compinit && compinit -C
+# <<< grok installer <<<
