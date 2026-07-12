@@ -23,6 +23,10 @@ writable_roots = ["/home/f/.cache", "/home/f/.matplotlib"]
 memories = true
 prevent_idle_sleep = true
 
+[features.multi_agent_v2]
+enabled = true
+max_concurrent_threads_per_session = 16
+
 [tui]
 status_line = ["model-with-reasoning", "current-dir", "context-usage", "context-window-size", "five-hour-limit", "weekly-limit"]
 theme = "ansi"
