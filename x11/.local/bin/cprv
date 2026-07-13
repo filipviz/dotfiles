@@ -1,0 +1,19 @@
+#!/bin/sh
+
+set -eu
+
+if [ -z "${CODEX_THREAD_ID:-}" ]; then
+	notify-send --urgency=critical "Codex preview" \
+		"Run this command from Codex shell mode: !cprv"
+	exit 1
+fi
+
+response=${XDG_CACHE_HOME:-$HOME/.cache}/codex/responses/$CODEX_THREAD_ID.md
+
+if [ ! -r "$response" ] || [ ! -s "$response" ]; then
+	notify-send --urgency=critical "Codex preview" \
+		"No cached response is available yet. Restart Codex and trust the preview hook with /hooks."
+	exit 1
+fi
+
+setsid -f markdown-preview "$response" </dev/null >/dev/null 2>&1

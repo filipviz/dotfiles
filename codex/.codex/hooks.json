@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 /home/f/.codex/hooks/cache-last-response.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

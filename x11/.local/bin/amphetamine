@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# Keep the machine awake until explicitly stopped from this terminal.
+
+set -u
+
+# The high-level locks cover normal power and sleep-key actions on this host.
+# Lid close needs its own low-level lock because logind otherwise ignores blockers.
+readonly INHIBIT_WHAT="shutdown:sleep:idle:handle-lid-switch"
+readonly INTERNAL_MODE="${AMPHETAMINE_INTERNAL_MODE:-}"
+
+usage() {
+  cat <<'EOF'
+Usage: amphetamine
+
+Keep the machine awake until Ctrl-C is pressed. This command must be run
+interactively in a terminal; launcher invocations exit immediately.
+EOF
+}
+
+die() {
+  printf 'amphetamine: %s\n' "$*" >&2
+  exit 1
+}
+
+require_terminal() {
+  if [[ ! -t 0 || ! -t 1 || ! -t 2 ]]; then
+    die "refusing to run without an interactive terminal"
+  fi
+}
+
+show_status() {
+  local elapsed hours minutes seconds
+
+  SECONDS=0
+  trap 'printf "\n"; exit 130' INT
+  trap 'printf "\n"; exit 143' TERM HUP
+
+  printf '\033[2J\033[H'
+  printf '\033[1;35m⚡ AMPHETAMINE\033[0m\n'
+  printf '\033[1;32mPROTECTION ACTIVE\033[0m\n'
+  printf '\n'
+  printf '\033[1mInhibiting\033[0m\n'
+  printf '  ✓ shutdown, poweroff, and reboot\n'
+  printf '  ✓ suspend, hibernation, and idle sleep\n'
+  printf '  ✓ lid-close sleep\n'
+  printf '\n'
+  printf 'The display may turn off; the machine will stay awake.\n'
+  printf 'Keep external power connected for uninterrupted work.\n'
+  printf '\n'
+  printf '\033[1;33mPress Ctrl-C to stop and restore normal behavior.\033[0m\n'
+  printf '\n'
+
+  while true; do
+    elapsed=$SECONDS
+    hours=$((elapsed / 3600))
+    minutes=$(((elapsed % 3600) / 60))
+    seconds=$((elapsed % 60))
+
+    printf '\rAwake for: \033[1m%02d:%02d:%02d\033[0m' \
+      "$hours" "$minutes" "$seconds"
+
+    sleep 1
+  done
+}
+
+case "${1:-}" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+esac
+
+require_terminal
+
+if [[ "$INTERNAL_MODE" == "status" && "${1:-}" == "--internal-status" ]]; then
+  show_status
+fi
+
+if (($# != 0)); then
+  usage >&2
+  exit 2
+fi
+
+command -v systemd-inhibit >/dev/null 2>&1 || die "systemd-inhibit is not installed"
+
+export AMPHETAMINE_INTERNAL_MODE=status
+exec systemd-inhibit \
+  --what="$INHIBIT_WHAT" \
+  --mode=block \
+  --who=amphetamine \
+  --why="User requested uninterrupted interactive work" \
+  "$0" --internal-status

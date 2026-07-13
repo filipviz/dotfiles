@@ -9,21 +9,28 @@ markdown=$tmpdir/clipboard.md
 normalized=$tmpdir/normalized.md
 pdf=$tmpdir/preview.pdf
 log=$tmpdir/pandoc.log
-tex_cache=${XDG_CACHE_HOME:-$HOME/.cache}/texlive
-font_fallback=${XDG_DATA_HOME:-$HOME/.local/share}/markdown-preview/font-fallback.tex
+typst_metadata=${XDG_DATA_HOME:-$HOME/.local/share}/markdown-preview/typst.yaml
+typst_math_filter=${XDG_DATA_HOME:-$HOME/.local/share}/markdown-preview/typst-math.lua
 
-mkdir -p "$tex_cache"
-
-if ! xclip -selection clipboard -out >"$markdown" 2>/dev/null || [ ! -s "$markdown" ]; then
-	notify-send --urgency=critical "Markdown preview" "The clipboard does not contain text."
-	exit 1
-fi
-
-if [ ! -r "$font_fallback" ]; then
-	notify-send --urgency=critical "Markdown preview failed" \
-		"Font fallback configuration not found: $font_fallback"
-	exit 1
-fi
+case $# in
+	0)
+		if ! xclip -selection clipboard -out >"$markdown" 2>/dev/null || [ ! -s "$markdown" ]; then
+			notify-send --urgency=critical "Markdown preview" "The clipboard does not contain text."
+			exit 1
+		fi
+		;;
+	1)
+		if [ ! -r "$1" ] || [ ! -s "$1" ]; then
+			notify-send --urgency=critical "Markdown preview" "The input file is missing or empty."
+			exit 1
+		fi
+		markdown=$1
+		;;
+	*)
+		notify-send --urgency=critical "Markdown preview" "Usage: markdown-preview [FILE]"
+		exit 1
+		;;
+esac
 
 if ! python3 -c \
 	'import html, sys; sys.stdout.write(html.unescape(sys.stdin.read()))' \
@@ -35,11 +42,11 @@ then
 	exit 1
 fi
 
-if ! env TEXMFCACHE="$tex_cache" TEXMFVAR="$tex_cache" pandoc \
+if ! pandoc \
 	--from=markdown+tex_math_single_backslash \
-	--pdf-engine=lualatex \
-	--include-in-header="$font_fallback" \
-	--variable=geometry:left=0.75in,right=0.75in,top=0.25in,bottom=0.25in \
+	--lua-filter="$typst_math_filter" \
+	--pdf-engine=typst \
+	--metadata-file="$typst_metadata" \
 	--output="$pdf" \
 	"$normalized" 2>"$log"
 then

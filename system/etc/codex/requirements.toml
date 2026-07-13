@@ -1,0 +1,11 @@
+# Keep Codex inside an interactive, sandboxed permission mode.
+allowed_approval_policies = ["untrusted", "on-request"]
+allowed_sandbox_modes = ["read-only", "workspace-write"]
+
+# Block rm when it would need to escape the active sandbox. Normal deletion
+# inside the current workspace remains available.
+[rules]
+prefix_rules = [
+  { pattern = [{ any_of = ["rm", "/usr/bin/rm"] }], decision = "forbidden", justification = "Never escalate rm beyond the active sandbox; ask Filip to perform the deletion manually." },
+  { pattern = [{ any_of = ["sudo"] }, { any_of = ["rm", "/usr/bin/rm"] }], decision = "forbidden", justification = "Never run sudo rm from Codex." },
+]

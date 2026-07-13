@@ -1,0 +1,20 @@
+margin:
+  left: 1in
+  right: 1in
+  top: 0.25in
+  bottom: 0.25in
+papersize: us-letter
+mainfont: XCharter
+mathfont: New Computer Modern Math
+codefont: Berkeley Mono
+page-numbering: false
+header-includes:
+  - |
+    ```{=typst}
+    #show quote.where(block: true): it => block(
+      width: 100%,
+      inset: (left: 0.8em, top: 0.25em, bottom: 0.25em),
+      stroke: (left: 1.5pt + luma(160)),
+      it.body,
+    )
+    ```
