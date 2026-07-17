@@ -2,6 +2,10 @@
 
 set -eu
 
+if [ "${1:-}" = "--save" ]; then
+	exec scrot --select --silent --file "$HOME/screenshot-%Y-%m-%d_%H-%M-%S.png"
+fi
+
 screenshot=$(mktemp --suffix=.png "${TMPDIR:-/tmp}/screenshot.XXXXXX")
 trap 'rm -f "$screenshot"' EXIT HUP INT TERM
 

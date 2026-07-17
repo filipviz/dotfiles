@@ -61,6 +61,9 @@ trust_level = "trusted"
 [projects."/home/f/dev/grl"]
 trust_level = "trusted"
 
+[projects."/home/f/dev/codex"]
+trust_level = "trusted"
+
 [notice]
 fast_default_opt_out = true
 hide_rate_limit_model_nudge = true

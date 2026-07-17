@@ -27,6 +27,7 @@ https://finbarr.ca/feed.xml ! interesting
 https://jeremybernste.in/feed.xml ! interesting "~Jeremy Bernstein"
 https://www.beren.io/feed.xml ! interesting "~Beren Millidge"
 https://roonscape.ai/feed ! interesting "~roon"
+https://corbt.com/feed.xml ! interesting
 
 https://github.com/KellerJordan/modded-nanogpt/commits/master.atom ! github "~modded-nanogpt"
 https://github.com/karpathy/nanochat/commits/master.atom ! github "~nanochat"

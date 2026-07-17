@@ -20,6 +20,9 @@ sudo install -Dm0644 -o root -g root \
 
 Notes:
 
+- Neovim's Zen Mode fullscreen and pointer-hiding hooks target the current
+  Alacritty window on X11. They require the Arch packages `wmctrl`,
+  `xorg-xprop`, and `unclutter`; no dwm rebuild is needed.
 - `x11/` is the complete X11 session package: `.xprofile`, `.xinitrc`,
   dunst and dwm configuration, and X11-oriented commands including
   `amphetamine` and `dwm-status`. `.xinitrc` starts dunst and dwm-status,

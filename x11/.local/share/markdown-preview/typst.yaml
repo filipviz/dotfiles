@@ -7,6 +7,7 @@ papersize: us-letter
 mainfont: XCharter
 mathfont: New Computer Modern Math
 codefont: Berkeley Mono
+linkcolor: "#0645ad"
 page-numbering: false
 header-includes:
   - |

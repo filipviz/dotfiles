@@ -169,6 +169,37 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 	end,
 })
 
+local zen_mode_buffer
+local zen_mode_tmux_status
+local zen_mode_tmux_status_is_local
+local zen_mode_window
+local zen_mode_was_fullscreen
+local zen_mode_unclutter
+
+local function tmux(command)
+	if not vim.env.TMUX then return end
+	local result = vim.system(vim.list_extend({ "tmux" }, command), { text = true }):wait()
+	if result.code == 0 then return vim.trim(result.stdout) end
+end
+
+local function fullscreen_state(window)
+	if vim.fn.executable("xprop") == 0 then return end
+	local result = vim.system({ "xprop", "-id", window, "_NET_WM_STATE" }, { text = true }):wait()
+	if result.code == 0 then return result.stdout:find("_NET_WM_STATE_FULLSCREEN", 1, true) ~= nil end
+end
+
+local function set_fullscreen(window, enabled)
+	if vim.fn.executable("wmctrl") == 0 then return end
+	vim.system({ "wmctrl", "-i", "-r", window, "-b", (enabled and "add" or "remove") .. ",fullscreen" }):wait()
+end
+
+local function stop_zen_unclutter()
+	if not zen_mode_unclutter then return end
+	pcall(zen_mode_unclutter.kill, zen_mode_unclutter, 15)
+	zen_mode_unclutter = nil
+end
+
+vim.api.nvim_create_autocmd("VimLeavePre", { callback = stop_zen_unclutter })
 
 require("lazy").setup({
 	spec = {
@@ -263,6 +294,95 @@ require("lazy").setup({
 					view = { { "n", "q", "<cmd>DiffviewClose<CR>", { desc = "Close diffview" } } },
 					file_panel = { { "n", "q", "<cmd>DiffviewClose<CR>", { desc = "Close diffview" } } },
 				},
+			},
+		},
+		{
+			"folke/zen-mode.nvim",
+			cmd = "ZenMode",
+			keys = {
+				{ "<leader>z", "<cmd>ZenMode<CR>", desc = "Toggle zen mode" },
+			},
+			opts = {
+				window = {
+					width = 80,
+					options = {
+						signcolumn = "no",
+						number = false,
+						relativenumber = false,
+						cursorline = false,
+						foldcolumn = "0",
+						list = false,
+						listchars = "",
+						showbreak = "",
+					},
+				},
+				plugins = {
+					options = {
+						laststatus = 0,
+						listchars = "",
+						showbreak = "",
+					},
+					twilight = { enabled = false },
+					alacritty = {
+						enabled = true,
+						font = "12",
+					},
+				},
+				on_open = function(win)
+					zen_mode_buffer = vim.api.nvim_win_get_buf(win)
+					vim.keymap.set({ "n", "x" }, "j", "gj", {
+						buffer = zen_mode_buffer,
+						desc = "Down by screen line (Zen Mode)",
+					})
+					vim.keymap.set({ "n", "x" }, "k", "gk", {
+						buffer = zen_mode_buffer,
+						desc = "Up by screen line (Zen Mode)",
+					})
+
+					local session_status = tmux({ "show-options", "-qv", "status" })
+					if session_status ~= nil then
+						zen_mode_tmux_status_is_local = session_status ~= ""
+						zen_mode_tmux_status = zen_mode_tmux_status_is_local and session_status
+							or tmux({ "show-options", "-gv", "status" })
+						if zen_mode_tmux_status then tmux({ "set-option", "status", "off" }) end
+					end
+
+					local window = tonumber(vim.env.ALACRITTY_WINDOW_ID or vim.env.WINDOWID)
+					if window then
+						zen_mode_window = ("0x%x"):format(window)
+						zen_mode_was_fullscreen = fullscreen_state(zen_mode_window)
+						if zen_mode_was_fullscreen == false then set_fullscreen(zen_mode_window, true) end
+					end
+
+					if vim.env.DISPLAY and vim.fn.executable("unclutter") == 1 then
+						zen_mode_unclutter = vim.system({ "unclutter", "--timeout", "0.05", "--start-hidden" })
+					end
+				end,
+				on_close = function()
+					if zen_mode_buffer and vim.api.nvim_buf_is_valid(zen_mode_buffer) then
+						pcall(vim.keymap.del, { "n", "x" }, "j", { buffer = zen_mode_buffer })
+						pcall(vim.keymap.del, { "n", "x" }, "k", { buffer = zen_mode_buffer })
+					end
+					zen_mode_buffer = nil
+
+					if zen_mode_tmux_status then
+						if zen_mode_tmux_status_is_local then
+							tmux({ "set-option", "status", zen_mode_tmux_status })
+						else
+							tmux({ "set-option", "-u", "status" })
+						end
+					end
+					zen_mode_tmux_status = nil
+					zen_mode_tmux_status_is_local = nil
+
+					if zen_mode_window and zen_mode_was_fullscreen == false then
+						set_fullscreen(zen_mode_window, false)
+					end
+					zen_mode_window = nil
+					zen_mode_was_fullscreen = nil
+
+					stop_zen_unclutter()
+				end,
 			},
 		},
 		{

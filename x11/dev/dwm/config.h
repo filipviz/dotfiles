@@ -63,11 +63,13 @@ static const Layout layouts[] = {
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_bg, "-nf", col_text, "-sb", col_pine, "-sf", col_bg, NULL };
 static const char *screenshotcmd[] = { "screenshot-selection", NULL };
+static const char *screenshotsavecmd[] = { "screenshot-selection", "--save", NULL };
 static const char *termcmd[]  = { "alacritty", NULL };
 
 static const Key keys[] = {
 	/* modifier                     key        function        argument */
 	{ 0,                            XK_Insert, spawn,          {.v = screenshotcmd } },
+	{ ShiftMask,                    XK_Insert, spawn,          {.v = screenshotsavecmd } },
 	{ MODKEY,                       XK_p,      spawn,          {.v = dmenucmd } },
 	{ MODKEY|ShiftMask,             XK_Return, spawn,          {.v = termcmd } },
 	{ 0,              XF86XK_AudioRaiseVolume, spawn,          SHCMD("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+; pkill -USR1 -f dwm-status") },

@@ -11,6 +11,7 @@ pdf=$tmpdir/preview.pdf
 log=$tmpdir/pandoc.log
 typst_metadata=${XDG_DATA_HOME:-$HOME/.local/share}/markdown-preview/typst.yaml
 typst_math_filter=${XDG_DATA_HOME:-$HOME/.local/share}/markdown-preview/typst-math.lua
+html_filter=${XDG_DATA_HOME:-$HOME/.local/share}/markdown-preview/html.lua
 
 case $# in
 	0)
@@ -43,7 +44,8 @@ then
 fi
 
 if ! pandoc \
-	--from=markdown+tex_math_single_backslash \
+	--from=markdown+tex_math_single_backslash-citations+autolink_bare_uris \
+	--lua-filter="$html_filter" \
 	--lua-filter="$typst_math_filter" \
 	--pdf-engine=typst \
 	--metadata-file="$typst_metadata" \
