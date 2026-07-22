@@ -5,4 +5,14 @@ export PAGER="less"
 export CLAUDE_CODE_NO_FLICKER=1
 export CLAUDE_CODE_SUBAGENT_MODEL="claude-sonnet-5"
 
+export UV_MALWARE_CHECK=1
+export UV_EXCLUDE_NEWER="3 days"
+
+export NPM_CONFIG_MIN_RELEASE_AGE=3
+export NPM_CONFIG_STRICT_ALLOW_SCRIPTS=true
+export NPM_CONFIG_IGNORE_EXTENSION=true
+export NPM_CONFIG_STRICT_NPMRC=true
+export NPM_CONFIG_ALLOW_DIRECTORY=root
+export NPM_CONFIG_ALLOW_FILE=root
+
 export PATH="$HOME/.local/bin:$PATH"

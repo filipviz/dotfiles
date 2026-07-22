@@ -1,19 +1,224 @@
-#!/bin/sh
+#!/usr/bin/env python3
+"""Preview a final assistant response from the active Codex transcript."""
 
-set -eu
+from __future__ import annotations
 
-if [ -z "${CODEX_THREAD_ID:-}" ]; then
-	notify-send --urgency=critical "Codex preview" \
-		"Run this command from Codex shell mode: !cprv"
-	exit 1
-fi
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import sqlite3
+import subprocess
+import sys
+import tempfile
+from typing import NoReturn
 
-response=${XDG_CACHE_HOME:-$HOME/.cache}/codex/responses/$CODEX_THREAD_ID.md
 
-if [ ! -r "$response" ] || [ ! -s "$response" ]; then
-	notify-send --urgency=critical "Codex preview" \
-		"No cached response is available yet. Restart Codex and trust the preview hook with /hooks."
-	exit 1
-fi
+TITLE = "Codex preview"
+MEMORY_CITATION = re.compile(
+    r"<oai-mem-citation>.*?</oai-mem-citation>\s*\Z",
+    re.DOTALL,
+)
 
-setsid -f markdown-preview "$response" </dev/null >/dev/null 2>&1
+
+def notify(message: str) -> None:
+    command = shutil.which("notify-send")
+    if command is None:
+        return
+    subprocess.run(
+        [command, "--urgency=critical", TITLE, message],
+        check=False,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+
+def fail(message: str) -> NoReturn:
+    print(f"cprv: {message}", file=sys.stderr)
+    notify(message)
+    raise SystemExit(1)
+
+
+def parse_offset(arguments: list[str]) -> int:
+    if arguments in (["-h"], ["--help"]):
+        print(
+            "Usage: cprv [OFFSET]\n\nOFFSET  0 for the latest response (default), 1 for the previous one, etc."
+        )
+        raise SystemExit(0)
+    if len(arguments) > 1:
+        fail("Usage: cprv [OFFSET]")
+    if not arguments:
+        return 0
+    try:
+        offset = int(arguments[0])
+    except ValueError:
+        fail("OFFSET must be a non-negative integer.")
+    if offset < 0:
+        fail("OFFSET must be a non-negative integer.")
+    return offset
+
+
+def database_version(path: Path) -> int:
+    match = re.fullmatch(r"state_(\d+)", path.stem)
+    return int(match.group(1)) if match else -1
+
+
+def rollout_from_database(codex_home: Path, thread_id: str) -> Path | None:
+    databases = sorted(
+        codex_home.glob("state_*.sqlite"),
+        key=database_version,
+        reverse=True,
+    )
+    for database in databases:
+        try:
+            with sqlite3.connect(f"file:{database}?mode=ro", uri=True) as connection:
+                row = connection.execute(
+                    "SELECT rollout_path FROM threads WHERE id = ?",
+                    (thread_id,),
+                ).fetchone()
+        except sqlite3.Error:
+            continue
+        if row and isinstance(row[0], str):
+            rollout = Path(row[0])
+            if rollout.is_file():
+                return rollout
+    return None
+
+
+def rollout_from_filesystem(codex_home: Path, thread_id: str) -> Path | None:
+    matches = [
+        *codex_home.glob(f"sessions/**/rollout-*-{thread_id}.jsonl"),
+        *codex_home.glob(f"archived_sessions/**/rollout-*-{thread_id}.jsonl"),
+    ]
+    files = [path for path in matches if path.is_file()]
+    return max(files, key=lambda path: path.stat().st_mtime) if files else None
+
+
+def find_rollout(codex_home: Path, thread_id: str) -> Path:
+    rollout = rollout_from_database(codex_home, thread_id)
+    if rollout is None:
+        rollout = rollout_from_filesystem(codex_home, thread_id)
+    if rollout is None:
+        fail(f"Could not find the transcript for Codex thread {thread_id}.")
+    return rollout
+
+
+def content_text(content: object) -> str | None:
+    if not isinstance(content, list):
+        return None
+    parts = []
+    for item in content:
+        if not isinstance(item, dict) or item.get("type") not in {
+            "output_text",
+            "text",
+        }:
+            continue
+        text = item.get("text")
+        if isinstance(text, str):
+            parts.append(text)
+    message = MEMORY_CITATION.sub("", "\n".join(parts))
+    return message if message else None
+
+
+def final_responses(rollout: Path) -> list[str]:
+    response_items = []
+    event_messages = []
+    try:
+        lines = rollout.open(encoding="utf-8")
+    except OSError as error:
+        fail(f"Could not read the Codex transcript: {error}")
+
+    with lines:
+        for line in lines:
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                # The active rollout can end with a record that is still being written.
+                continue
+            payload = record.get("payload")
+            if not isinstance(payload, dict):
+                continue
+            phase = payload.get("phase")
+            if phase not in {None, "final_answer"}:
+                continue
+            if (
+                record.get("type") == "response_item"
+                and payload.get("type") == "message"
+                and payload.get("role") == "assistant"
+            ):
+                message = content_text(payload.get("content"))
+                if message is not None:
+                    response_items.append(message)
+            elif (
+                record.get("type") == "event_msg"
+                and payload.get("type") == "agent_message"
+            ):
+                message = payload.get("message")
+                if isinstance(message, str) and message:
+                    event_messages.append(MEMORY_CITATION.sub("", message))
+
+    # Current rollouts contain both forms; response_item is the durable conversation record.
+    return response_items or event_messages
+
+
+def detach_preview(message: str) -> None:
+    preview = shutil.which("markdown-preview")
+    if preview is None:
+        fail("markdown-preview is not available on PATH.")
+
+    descriptor, temporary_name = tempfile.mkstemp(prefix="cprv-", suffix=".md")
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as output:
+            output.write(message)
+        temporary.chmod(0o600)
+        child = os.fork()
+    except OSError as error:
+        temporary.unlink(missing_ok=True)
+        fail(f"Could not launch the preview: {error}")
+
+    if child != 0:
+        os.waitpid(child, 0)
+        return
+
+    os.setsid()
+    if os.fork() != 0:
+        os._exit(0)
+
+    try:
+        with open(os.devnull, "r+b", buffering=0) as devnull:
+            subprocess.run(
+                [preview, str(temporary)],
+                check=False,
+                stdin=devnull,
+                stdout=devnull,
+                stderr=devnull,
+            )
+    finally:
+        temporary.unlink(missing_ok=True)
+    os._exit(0)
+
+
+def main() -> None:
+    offset = parse_offset(sys.argv[1:])
+    thread_id = os.environ.get("CODEX_THREAD_ID")
+    if not thread_id:
+        fail("Run this command from Codex shell mode: !cprv [OFFSET]")
+    if re.fullmatch(r"[A-Za-z0-9_-]+", thread_id) is None:
+        fail("CODEX_THREAD_ID has an unexpected format.")
+
+    codex_home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")).expanduser()
+    responses = final_responses(find_rollout(codex_home, thread_id))
+    if not responses:
+        fail("This Codex thread has no completed assistant responses yet.")
+    if offset >= len(responses):
+        noun = "response" if len(responses) == 1 else "responses"
+        fail(f"This Codex thread has only {len(responses)} completed assistant {noun}.")
+
+    detach_preview(responses[-1 - offset])
+
+
+if __name__ == "__main__":
+    main()

@@ -13,7 +13,7 @@ project_doc_fallback_filenames = ["CLAUDE.md"]
 suppress_unstable_features_warning = true
 plan_mode_reasoning_effort = "xhigh"
 notify = ["/home/f/.codex/notify-tmux.sh", "agent-turn-complete"]
-service_tier = "default"
+service_tier = "fast"
 check_for_update_on_startup = false
 
 [analytics]
@@ -64,14 +64,12 @@ trust_level = "trusted"
 [projects."/home/f/dev/codex"]
 trust_level = "trusted"
 
+[projects."/home/f/dev/rl-100"]
+trust_level = "trusted"
+
 [notice]
 fast_default_opt_out = true
 hide_rate_limit_model_nudge = true
 
 [mcp_servers.openaiDeveloperDocs]
 url = "https://developers.openai.com/mcp"
-
-[hooks.state]
-
-[hooks.state."/home/f/.codex/hooks.json:stop:0:0"]
-trusted_hash = "sha256:534ae027437446b8b28e53056e3dced8bc6ad0a9bbaaaa1c13023813553994d2"

@@ -9,7 +9,7 @@ background = "#000000"
 size = 10.0
 
 [font.normal]
-family = "Berkeley Mono"
+family = "Berkeley Mono Alacritty"
 
 [scrolling]
 history = 50_000
