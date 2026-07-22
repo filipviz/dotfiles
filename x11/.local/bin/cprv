@@ -136,6 +136,8 @@ def final_responses(rollout: Path) -> list[str]:
                 record = json.loads(line)
             except json.JSONDecodeError:
                 # The active rollout can end with a record that is still being written.
+                if not line.endswith("\n"):
+                    break
                 continue
             payload = record.get("payload")
             if not isinstance(payload, dict):

@@ -12,7 +12,7 @@ file_opener = "none"
 project_doc_fallback_filenames = ["CLAUDE.md"]
 suppress_unstable_features_warning = true
 plan_mode_reasoning_effort = "xhigh"
-notify = ["/home/f/.codex/notify-tmux.sh", "agent-turn-complete"]
+notify = ["/home/f/.codex/notify-tmux.sh"]
 service_tier = "fast"
 check_for_update_on_startup = false
 
@@ -20,10 +20,7 @@ check_for_update_on_startup = false
 enabled = false
 
 [otel]
-exporter = "none"
-trace_exporter = "none"
 metrics_exporter = "none"
-log_user_prompt = false
 
 [sandbox_workspace_write]
 network_access = true

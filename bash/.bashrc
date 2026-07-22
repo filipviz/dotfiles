@@ -11,8 +11,7 @@ export PAGER="less"
 export PATH="$HOME/.local/bin:$PATH"
 
 # Disable ctrl-s terminal freeze (nvim uses <C-s> for LSP signature help).
-# 2>/dev/null: this file is also sourced by non-interactive ssh shells.
-stty stop undef 2>/dev/null
+stty stop undef
 
 HISTSIZE=50000
 HISTFILESIZE=50000
@@ -26,22 +25,19 @@ alias lg="lazygit"
 alias cb='xclip -selection clipboard'
 alias pb='xclip -selection clipboard -out'
 clip() {
-  if [ -n "${TMUX:-}" ] && command -v tmux >/dev/null 2>&1; then
+  if [[ -n $TMUX ]]; then
     tmux load-buffer -w -
   else
     printf '\033]52;c;'
-    base64 | tr -d '\n'
+    base64 -w 0
     printf '\a'
   fi
 }
 
 if command -v fzf >/dev/null 2>&1; then
-  if fzf --bash >/dev/null 2>&1; then
-    eval "$(fzf --bash)"
-  else
-    [ -r /usr/share/doc/fzf/examples/key-bindings.bash ] && . /usr/share/doc/fzf/examples/key-bindings.bash
-    [ -r /usr/share/doc/fzf/examples/completion.bash ] && . /usr/share/doc/fzf/examples/completion.bash
-  fi
+  fzf_init=$(fzf --bash) || return 1
+  eval "$fzf_init" || return 1
+  unset fzf_init
 
   ff() {
     fzf --height 40% --layout reverse \

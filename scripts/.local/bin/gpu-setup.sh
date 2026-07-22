@@ -60,8 +60,7 @@ target_arch() {
 
 latest_github_version() {
   curl -fsSL "https://api.github.com/repos/$1/releases/latest" |
-    sed -n 's/.*"tag_name":[[:space:]]*"v\{0,1\}\([^"]*\)".*/\1/p' |
-    head -n 1
+    jq -er '.tag_name | strings | sub("^v"; "")'
 }
 
 # Download a release tarball and install a single binary from it. The third
@@ -85,6 +84,7 @@ install_packages() {
   $sudo apt-get update
   $sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     bubblewrap \
+    build-essential \
     ca-certificates \
     curl \
     fd-find \
@@ -134,15 +134,12 @@ install_delta() {
     "delta-${version}-${target}/delta"
 }
 
-fzf_is_modern() {
-  local version
-  version="$(fzf --version 2>/dev/null | awk '{print $1}')"
-  [ -n "$version" ] || return 1
-  [ "$(printf '%s\n' "0.36.0" "$version" | sort -V | tail -n 1)" = "$version" ]
+fzf_has_bash_init() {
+  fzf --bash >/dev/null 2>&1
 }
 
 install_fzf() {
-  if command -v fzf >/dev/null 2>&1 && fzf_is_modern; then
+  if command -v fzf >/dev/null 2>&1 && fzf_has_bash_init; then
     log "fzf already installed."
     return
   fi
@@ -155,6 +152,7 @@ install_fzf() {
   log "Installing fzf..."
   install_release_binary fzf \
     "https://github.com/junegunn/fzf/releases/download/v${version}/fzf-${version}-linux_${arch}.tar.gz"
+  fzf_has_bash_init || die "installed fzf does not support --bash"
 }
 
 install_neovim() {
@@ -213,6 +211,8 @@ install_uv() {
     local sudo
     sudo="$(sudo_cmd)"
     $sudo ln -sf "$HOME/.local/bin/uv" /usr/local/bin/uv
+  else
+    die "uv install did not produce $HOME/.local/bin/uv"
   fi
 }
 
@@ -234,12 +234,10 @@ install_codex() {
     die "Codex install did not produce a usable binary"
   fi
 
-  if [ -n "$codex_bin" ]; then
-    local sudo
-    sudo="$(sudo_cmd)"
-    $sudo ln -sf "$codex_bin" /usr/local/bin/codex
-    $sudo ln -sf "$DOTFILES_DIR/codex/.codex/notify-tmux.sh" /usr/local/bin/codex-notify-tmux
-  fi
+  local sudo
+  sudo="$(sudo_cmd)"
+  $sudo ln -sf "$codex_bin" /usr/local/bin/codex
+  $sudo ln -sf "$DOTFILES_DIR/codex/.codex/notify-tmux.sh" /usr/local/bin/codex-notify-tmux
 
   log "Starting Codex app server..."
   codex app-server daemon bootstrap --remote-control
@@ -260,6 +258,8 @@ install_claude() {
     local sudo
     sudo="$(sudo_cmd)"
     $sudo ln -sf "$HOME/.local/bin/claude" /usr/local/bin/claude
+  elif ! command -v claude >/dev/null 2>&1; then
+    die "Claude Code install did not produce a usable binary"
   fi
 }
 
@@ -293,8 +293,7 @@ EOF
 
   if [ -d "$REPO_DIR/.git" ]; then
     log "Updating $REPO_DIR..."
-    git -C "$REPO_DIR" fetch --all --prune
-    git -C "$REPO_DIR" status --short --branch
+    git -C "$REPO_DIR" pull --ff-only
   else
     log "Cloning trustworthy-gradients..."
     git clone "$REPO_SSH" "$REPO_DIR"
@@ -320,18 +319,18 @@ install_dotfiles_repo() {
   if [ -s "$DOTFILES_ARCHIVE" ]; then
     log "Extracting uploaded dotfiles..."
     tar -xzf "$DOTFILES_ARCHIVE" -C "$HOME/Developer"
+    rm -f "$DOTFILES_ARCHIVE"
   elif [ -d "$DOTFILES_DIR/.git" ]; then
     log "Updating dotfiles..."
-    git -C "$DOTFILES_DIR" fetch --all --prune
-    git -C "$DOTFILES_DIR" status --short --branch
+    git -C "$DOTFILES_DIR" pull --ff-only
   else
     log "Cloning dotfiles..."
     git clone "$DOTFILES_REPO" "$DOTFILES_DIR"
   fi
 }
 
-# link_config keep|replace <src> <dest>: symlink dest -> src. An existing real
-# file is left alone (keep) or moved to <dest>.before-gpu-setup (replace).
+# link_config require-empty|replace <src> <dest>: symlink dest -> src. An
+# existing real file is rejected or moved to <dest>.before-gpu-setup.
 link_config() {
   local mode="$1" src="$2" dest="$3"
 
@@ -339,9 +338,9 @@ link_config() {
   mkdir -p "$(dirname "$dest")"
 
   if [ -e "$dest" ] && [ ! -L "$dest" ]; then
-    if [ "$mode" = keep ]; then
-      log "$dest already exists; leaving it unchanged."
-      return
+    [ "$mode" = replace ] || die "$dest already exists and is not a symlink"
+    if [ -e "$dest.before-gpu-setup" ] || [ -L "$dest.before-gpu-setup" ]; then
+      die "$dest.before-gpu-setup already exists"
     fi
     mv "$dest" "$dest.before-gpu-setup"
     log "Moved existing $dest to $dest.before-gpu-setup."
@@ -351,19 +350,17 @@ link_config() {
 }
 
 link_dotfiles() {
-  log "Linking portable dotfiles..."
-  link_config keep "$DOTFILES_DIR/scripts/.local/bin/gpu-setup.sh" "$HOME/.local/bin/gpu-setup.sh"
+  log "Linking remote dotfiles..."
+  link_config require-empty "$DOTFILES_DIR/scripts/.local/bin/gpu-setup.sh" "$HOME/.local/bin/gpu-setup.sh"
   link_config replace "$DOTFILES_DIR/bash/.bashrc" "$HOME/.bashrc"
-  link_config keep "$DOTFILES_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf"
-  link_config keep "$DOTFILES_DIR/nvim/.config/nvim" "$HOME/.config/nvim"
+  link_config require-empty "$DOTFILES_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf"
+  link_config require-empty "$DOTFILES_DIR/nvim/.config/nvim" "$HOME/.config/nvim"
   link_config replace "$DOTFILES_DIR/codex/.codex/config.gpu.toml" "$HOME/.codex/config.toml"
-  link_config keep "$DOTFILES_DIR/codex/.codex/AGENTS.md" "$HOME/.codex/AGENTS.md"
   link_config replace "$DOTFILES_DIR/claude/.claude/settings.gpu.json" "$HOME/.claude/settings.json"
-  link_config keep "$DOTFILES_DIR/claude/.claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
-  link_config keep "$DOTFILES_DIR/claude/.claude/statusline-command.sh" "$HOME/.claude/statusline-command.sh"
-  link_config keep "$DOTFILES_DIR/claude/.claude/tmux-notify.sh" "$HOME/.claude/tmux-notify.sh"
-  link_config keep "$DOTFILES_DIR/git/.config/git/config" "$HOME/.config/git/config"
-  link_config keep "$DOTFILES_DIR/lazygit/.config/lazygit/config.yml" "$HOME/.config/lazygit/config.yml"
+  link_config require-empty "$DOTFILES_DIR/claude/.claude/statusline-command.sh" "$HOME/.claude/statusline-command.sh"
+  link_config require-empty "$DOTFILES_DIR/claude/.claude/tmux-notify.sh" "$HOME/.claude/tmux-notify.sh"
+  link_config require-empty "$DOTFILES_DIR/git/.config/git/config" "$HOME/.config/git/config"
+  link_config require-empty "$DOTFILES_DIR/lazygit/.config/lazygit/config.yml" "$HOME/.config/lazygit/config.yml"
 }
 
 verify_setup() {
@@ -372,12 +369,10 @@ verify_setup() {
   test -d "$DOTFILES_DIR/.git"
   test -x "$HOME/.local/bin/gpu-setup.sh"
   test -L "$HOME/.bashrc"
-  test -e "$HOME/.tmux.conf"
+  test -L "$HOME/.tmux.conf"
   test -e "$HOME/.config/nvim/init.lua"
   test -s "$HOME/.codex/config.toml"
-  test -s "$HOME/.codex/AGENTS.md"
   test -s "$HOME/.claude/settings.json"
-  test -s "$HOME/.claude/CLAUDE.md"
   test -s "$DEPLOY_KEY_DEST"
   test -d "$REPO_DIR/.git"
   codex --strict-config --version >/dev/null

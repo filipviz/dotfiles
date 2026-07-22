@@ -3,19 +3,23 @@
 set -eu
 
 tmpdir=$(mktemp -d)
-trap 'rm -rf "$tmpdir"' EXIT HUP INT TERM
+trap 'rm -rf "$tmpdir"' EXIT
+trap 'exit 1' HUP INT TERM
 
 markdown=$tmpdir/clipboard.md
 normalized=$tmpdir/normalized.md
 pdf=$tmpdir/preview.pdf
 log=$tmpdir/pandoc.log
-typst_metadata=${XDG_DATA_HOME:-$HOME/.local/share}/markdown-preview/typst.yaml
-typst_math_filter=${XDG_DATA_HOME:-$HOME/.local/share}/markdown-preview/typst-math.lua
-html_filter=${XDG_DATA_HOME:-$HOME/.local/share}/markdown-preview/html.lua
+data_dir=${XDG_DATA_HOME:-$HOME/.local/share}/markdown-preview
 
 case $# in
 	0)
-		if ! xclip -selection clipboard -out >"$markdown" 2>/dev/null || [ ! -s "$markdown" ]; then
+		if ! xclip -selection clipboard -out >"$markdown" 2>"$log"; then
+			notify-send --urgency=critical "Markdown preview failed" \
+				"$(tail -n 8 "$log")"
+			exit 1
+		fi
+		if [ ! -s "$markdown" ]; then
 			notify-send --urgency=critical "Markdown preview" "The clipboard does not contain text."
 			exit 1
 		fi
@@ -37,24 +41,22 @@ if ! python3 -c \
 	'import html, sys; sys.stdout.write(html.unescape(sys.stdin.read()))' \
 	<"$markdown" >"$normalized" 2>"$log"
 then
-	message=$(tail -n 8 "$log")
 	notify-send --urgency=critical "Markdown preview failed" \
-		"${message:-Could not normalize the clipboard text.}"
+		"Could not normalize the input. $(tail -n 8 "$log")"
 	exit 1
 fi
 
 if ! pandoc \
 	--from=markdown+tex_math_single_backslash-citations+autolink_bare_uris \
-	--lua-filter="$html_filter" \
-	--lua-filter="$typst_math_filter" \
+	--lua-filter="$data_dir/html.lua" \
+	--lua-filter="$data_dir/typst-math.lua" \
 	--pdf-engine=typst \
-	--metadata-file="$typst_metadata" \
+	--metadata-file="$data_dir/typst.yaml" \
 	--output="$pdf" \
 	"$normalized" 2>"$log"
 then
-	message=$(tail -n 8 "$log")
 	notify-send --urgency=critical "Markdown preview failed" \
-		"${message:-Pandoc could not convert the clipboard.}"
+		"Pandoc could not convert the input. $(tail -n 8 "$log")"
 	exit 1
 fi
 

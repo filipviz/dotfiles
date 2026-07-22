@@ -16,8 +16,7 @@ plan_mode_reasoning_effort = "xhigh"
 [tui]
 status_line = ["model-with-reasoning", "current-dir", "context-usage", "context-window-size", "five-hour-limit", "weekly-limit"]
 theme = "ansi"
-# Bells reach tmux (window flag) and Ghostty (dock bounce) even over SSH;
-# the default "auto" notification method emits OSC 9, which tmux swallows.
+# The default OSC 9 notification is swallowed by tmux; BEL reaches the client.
 notification_method = "bel"
 
 [projects."/"]

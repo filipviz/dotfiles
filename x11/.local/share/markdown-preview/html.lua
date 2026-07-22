@@ -14,11 +14,10 @@ function Pandoc(document)
     return nil
   end
 
-  local metadata = document.meta
-  document = pandoc.read(
+  local converted = pandoc.read(
     pandoc.write(document, "html", { html_math_method = "mathjax" }),
     "html+tex_math_single_backslash"
   )
-  document.meta = metadata
+  document.blocks = converted.blocks
   return document
 end

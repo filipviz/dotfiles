@@ -12,7 +12,6 @@ static const char dmenufont[]       = "Berkeley Mono:size=12";
 /* rose pine moon, with terminal's #000000 background */
 static const char col_bg[]          = "#000000";
 static const char col_overlay[]     = "#393552";
-static const char col_subtle[]      = "#908caa";
 static const char col_text[]        = "#e0def4";
 static const char col_pine[]        = "#3e8fb0";
 static const char *colors[][3]      = {
@@ -71,9 +70,9 @@ static const Key keys[] = {
 	{ ShiftMask,                    XK_Insert, spawn,          {.v = screenshotsavecmd } },
 	{ MODKEY,                       XK_p,      spawn,          {.v = dmenucmd } },
 	{ MODKEY|ShiftMask,             XK_Return, spawn,          {.v = termcmd } },
-	{ 0,              XF86XK_AudioRaiseVolume, spawn,          SHCMD("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+; pkill -USR1 -f dwm-status") },
-	{ 0,              XF86XK_AudioLowerVolume, spawn,          SHCMD("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-; pkill -USR1 -f dwm-status") },
-	{ 0,              XF86XK_AudioMute,        spawn,          SHCMD("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle; pkill -USR1 -f dwm-status") },
+	{ 0,              XF86XK_AudioRaiseVolume, spawn,          SHCMD("wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+ && pkill -USR1 -x dwm-status") },
+	{ 0,              XF86XK_AudioLowerVolume, spawn,          SHCMD("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- && pkill -USR1 -x dwm-status") },
+	{ 0,              XF86XK_AudioMute,        spawn,          SHCMD("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle && pkill -USR1 -x dwm-status") },
 	{ 0,              XF86XK_AudioMicMute,     spawn,          SHCMD("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle") },
 	{ MODKEY,                       XK_b,      togglebar,      {0} },
 	{ MODKEY,                       XK_j,      focusstack,     {.i = +1 } },

@@ -1,26 +1,23 @@
 #!/usr/bin/env python3
 """Generate local RSS feeds for sources that do not publish one."""
 
-from __future__ import annotations
-
+import fcntl
+import gzip
+import hashlib
+import json
+import re
+import sys
+import time
+import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from email.utils import format_datetime, parsedate_to_datetime
 from html import unescape
 from pathlib import Path
-from typing import Callable
-import fcntl
-import gzip
-import hashlib
-import json
-import sys
-import re
-import time
+from typing import BinaryIO, Callable
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
-import xml.etree.ElementTree as ET
-
 
 ANTHROPIC_SITEMAP_URL = "https://www.anthropic.com/sitemap.xml"
 OPENAI_RSS_URL = "https://openai.com/news/rss.xml"
@@ -31,12 +28,12 @@ MAX_ITEMS = 300
 
 ANTHROPIC_HOST = "www.anthropic.com"
 ANTHROPIC_LISTING_PATHS = ("/news", "/research", "/engineering")
+ANTHROPIC_ARTICLE_PATH_PREFIXES = tuple(f"{path}/" for path in ANTHROPIC_LISTING_PATHS)
 OPENAI_MODEL_NAME_RE = re.compile(
     r"\b("
     r"gpt[- ]?(?:\d|oss|rosalind)|"
     r"openai\s+o\d|"
     r"o\d(?:[- ]mini|[- ]pro)?|"
-    r"o4-mini|"
     r"sora|"
     r"dall[- ]?e|"
     r"whisper|"
@@ -56,20 +53,20 @@ OPENAI_MODEL_RELEASE_RE = re.compile(
 OPENAI_MODEL_RELEASE_CATEGORIES = {"Product", "Release", "API"}
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class SitemapEntry:
     loc: str
     lastmod: datetime
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class PageMetadata:
     title: str
     published: datetime
     summary: str = ""
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class FeedItem:
     loc: str
     date: datetime
@@ -78,7 +75,7 @@ class FeedItem:
     categories: tuple[str, ...] = ()
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class FeedSpec:
     feed_id: str
     source: str
@@ -88,8 +85,8 @@ class FeedSpec:
     matcher: Callable[[FeedItem], bool]
 
 
-def main(argv: list[str] | None = None) -> None:
-    argv = sys.argv[1:] if argv is None else argv
+def main() -> None:
+    argv = sys.argv[1:]
     specs = feed_specs()
 
     if len(argv) == 1 and argv[0] in {spec.feed_id for spec in specs}:
@@ -102,8 +99,11 @@ def main(argv: list[str] | None = None) -> None:
 
 def write_feed_to_stdout(feed_id: str, specs: tuple[FeedSpec, ...]) -> None:
     spec = next(spec for spec in specs if spec.feed_id == feed_id)
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
     entries = fetch_items_for_source(spec.source)
     items = select_items(entries, spec)
+    if not items:
+        raise ValueError(f"no items matched feed {feed_id}")
     write_rss_stream(spec, items, sys.stdout.buffer)
 
 
@@ -157,21 +157,27 @@ def fetch_anthropic_items() -> list[FeedItem]:
         entries_future = pool.submit(fetch_anthropic_sitemap)
         pages = list(
             pool.map(
-                lambda path: fetch_text(f"https://{ANTHROPIC_HOST}{path}"),
-                ANTHROPIC_LISTING_PATHS,
+                fetch_text,
+                (f"https://{ANTHROPIC_HOST}{path}" for path in ANTHROPIC_LISTING_PATHS),
             )
         )
         entries = entries_future.result()
 
     metadata: dict[str, PageMetadata] = {}
     for path, html in zip(ANTHROPIC_LISTING_PATHS, pages):
-        metadata.update(parse_anthropic_embedded_posts(html))
         if path == "/engineering":
             metadata.update(parse_anthropic_engineering_cards(html))
+        else:
+            metadata.update(parse_anthropic_embedded_posts(html))
 
     items: list[FeedItem] = []
     for entry in entries:
-        slug = urlparse(entry.loc).path.rstrip("/").rsplit("/", 1)[-1]
+        parsed_url = urlparse(entry.loc)
+        if parsed_url.netloc != ANTHROPIC_HOST or not parsed_url.path.startswith(
+            ANTHROPIC_ARTICLE_PATH_PREFIXES
+        ):
+            continue
+        slug = parsed_url.path.rstrip("/").rsplit("/", 1)[-1]
         page_metadata = metadata.get(entry.loc) or metadata.get(slug)
         if page_metadata:
             items.append(
@@ -179,8 +185,7 @@ def fetch_anthropic_items() -> list[FeedItem]:
                     loc=entry.loc,
                     date=page_metadata.published,
                     title=page_metadata.title,
-                    description=page_metadata.summary
-                    or f"Published {page_metadata.published.date().isoformat()}: {entry.loc}",
+                    description=page_metadata.summary,
                 )
             )
         else:
@@ -189,7 +194,7 @@ def fetch_anthropic_items() -> list[FeedItem]:
                     loc=entry.loc,
                     date=entry.lastmod,
                     title=title_from_url(entry.loc),
-                    description=f"Updated {entry.lastmod.date().isoformat()}: {entry.loc}",
+                    description="",
                 )
             )
     return items
@@ -200,11 +205,11 @@ def fetch_anthropic_sitemap() -> list[SitemapEntry]:
     root = ET.fromstring(data)
     entries: list[SitemapEntry] = []
     for url_node in root:
-        loc = (url_node.findtext("{*}loc") or "").strip()
-        if not loc:
-            continue
-        lastmod = parse_lastmod((url_node.findtext("{*}lastmod") or "").strip())
+        loc = required_text(url_node, "{*}loc")
+        lastmod = parse_lastmod(required_text(url_node, "{*}lastmod"))
         entries.append(SitemapEntry(loc=loc, lastmod=lastmod))
+    if not entries:
+        raise ValueError("Anthropic sitemap contains no entries")
     return entries
 
 
@@ -228,6 +233,8 @@ def parse_anthropic_embedded_posts(html: str) -> dict[str, PageMetadata]:
             published=parse_lastmod(published_match.group(1)),
             summary=summary,
         )
+    if not metadata:
+        raise ValueError("Anthropic page contains no embedded posts")
     return metadata
 
 
@@ -246,7 +253,7 @@ def parse_anthropic_engineering_cards(html: str) -> dict[str, PageMetadata]:
     card_re = re.compile(
         r'href="/engineering/(?P<slug>[^"]+)".*?'
         r"<h3[^>]*>(?P<title>.*?)</h3>.*?"
-        r'<div[^>]*__date[^>]*>(?P<date>[^<]+)</div>',
+        r"<div[^>]*__date[^>]*>(?P<date>[^<]+)</div>",
         re.DOTALL,
     )
     for match in card_re.finditer(html):
@@ -256,6 +263,8 @@ def parse_anthropic_engineering_cards(html: str) -> dict[str, PageMetadata]:
             title=strip_tags(match.group("title")),
             published=parse_display_date(match.group("date")),
         )
+    if not metadata:
+        raise ValueError("Anthropic engineering page contains no article cards")
     return metadata
 
 
@@ -263,13 +272,13 @@ def fetch_openai_items() -> list[FeedItem]:
     root = ET.fromstring(fetch_bytes(OPENAI_RSS_URL))
     channel = root.find("channel")
     if channel is None:
-        return []
+        raise ValueError("OpenAI RSS feed has no channel")
 
     items: list[FeedItem] = []
     for item in channel.findall("item"):
-        link = (item.findtext("link") or "").strip()
-        title = (item.findtext("title") or link).strip()
-        pub_date = parse_rss_date(item.findtext("pubDate"))
+        link = required_text(item, "link")
+        title = required_text(item, "title")
+        pub_date = parse_rss_date(required_text(item, "pubDate"))
         description = (item.findtext("description") or "").strip()
         categories = tuple(
             category.strip()
@@ -281,19 +290,20 @@ def fetch_openai_items() -> list[FeedItem]:
                 loc=link,
                 date=pub_date,
                 title=title,
-                description=description or f"Published {pub_date.date().isoformat()}: {link}",
+                description=description,
                 categories=categories,
             )
         )
+    if not items:
+        raise ValueError("OpenAI RSS feed contains no items")
     return items
 
 
 def fetch_text(url: str) -> str:
-    return fetch_bytes(url).decode("utf-8", "replace")
+    return fetch_bytes(url).decode()
 
 
 def fetch_bytes(url: str) -> bytes:
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
     cache_key = hashlib.sha256(url.encode("utf-8")).hexdigest()
     cache_path = CACHE_DIR / f"{cache_key}.body"
     lock_path = CACHE_DIR / f"{cache_key}.lock"
@@ -342,8 +352,6 @@ def fetch_uncached_bytes(url: str) -> bytes:
 
 
 def parse_lastmod(value: str) -> datetime:
-    if not value:
-        return datetime.now(UTC)
     return datetime.fromisoformat(value).astimezone(UTC)
 
 
@@ -351,10 +359,15 @@ def parse_display_date(value: str) -> datetime:
     return datetime.strptime(unescape(value).strip(), "%b %d, %Y").replace(tzinfo=UTC)
 
 
-def parse_rss_date(value: str | None) -> datetime:
-    if not value:
-        return datetime.now(UTC)
+def parse_rss_date(value: str) -> datetime:
     return parsedate_to_datetime(value).astimezone(UTC)
+
+
+def required_text(element: ET.Element, name: str) -> str:
+    value = (element.findtext(name) or "").strip()
+    if not value:
+        raise ValueError(f"missing required {name} element")
+    return value
 
 
 def decode_escaped_json_string(value: str) -> str:
@@ -399,7 +412,7 @@ def title_from_url(loc: str) -> str:
     path = urlparse(loc).path.rstrip("/")
     slug = path.rsplit("/", 1)[-1]
     if not slug:
-        return loc
+        raise ValueError(f"URL has no title slug: {loc}")
     words = slug.replace("_", "-").split("-")
     return " ".join(format_title_word(word) for word in words if word)
 
@@ -437,7 +450,7 @@ def rss_tree(spec: FeedSpec, items: list[FeedItem]) -> ET.ElementTree:
     return tree
 
 
-def write_rss_stream(spec: FeedSpec, items: list[FeedItem], stream: object) -> None:
+def write_rss_stream(spec: FeedSpec, items: list[FeedItem], stream: BinaryIO) -> None:
     tree = rss_tree(spec, items)
     tree.write(stream, encoding="utf-8", xml_declaration=True)
 

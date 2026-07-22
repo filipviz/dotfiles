@@ -5,7 +5,6 @@
 foreground = "#e0def4"
 background = "#232136"
 dim_foreground = "#908caa"
-bright_foreground = "#e0def4"
 
 [colors.cursor]
 text = "#e0def4"
@@ -30,10 +29,6 @@ background = "#2a273f"
 [colors.hints.end]
 foreground = "#6e6a86"
 background = "#2a273f"
-
-[colors.line_indicator]
-foreground = "None"
-background = "None"
 
 [colors.footer_bar]
 foreground = "#e0def4"
@@ -72,4 +67,3 @@ blue = "#9ccfd8"
 magenta = "#c4a7e7"
 cyan = "#ea9a97"
 white = "#e0def4"
-

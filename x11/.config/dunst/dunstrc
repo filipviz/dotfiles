@@ -3,7 +3,6 @@
     font = Berkeley Mono 10
     frame_width = 2
     gap_size = 6
-    corner_radius = 0
 
 [urgency_low]
     background = "#000000"

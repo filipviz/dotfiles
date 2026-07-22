@@ -7,14 +7,14 @@
 # 2. Ensure ~/.ssh/gpu-key is loaded in ssh-agent.
 # 3. Rewrite the managed Host gpu block in ~/.ssh/config.
 # 4. Wait until SSH works through gpu.
-# 5. Install local Ghostty terminfo on the remote host.
+# 5. Install local Alacritty terminfo on the remote host.
 # 6. Upload the current dotfiles checkout, project deploy key, and gpu-setup.sh.
 # 7. Run gpu-setup.sh on the remote host.
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-DOTFILES_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd -P)"
+DOTFILES_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd -P)"
 GPU_SETUP="$SCRIPT_DIR/gpu-setup.sh"
 HOST_ALIAS="gpu"
 SSH_KEY="$HOME/.ssh/gpu-key"
@@ -40,7 +40,7 @@ require_command() {
 }
 
 check_common_prereqs() {
-  require_command jq ssh scp ssh-add ssh-keygen tar
+  require_command infocmp jq ssh scp ssh-add ssh-keygen tar
 
   [ -x "$GPU_SETUP" ] || die "missing executable GPU setup script: $GPU_SETUP"
   [ -d "$DOTFILES_DIR/.git" ] || die "dotfiles repo not found at $DOTFILES_DIR"
@@ -342,20 +342,30 @@ update_ssh_config() {
   mkdir -p "$HOME/.ssh"
   touch "$HOME/.ssh/config"
   chmod 600 "$HOME/.ssh/config"
-  tmp="$(mktemp)"
+  tmp="$(mktemp "$HOME/.ssh/config.XXXXXX")"
+  trap 'rm -f "$tmp"; trap - RETURN' RETURN
 
   awk -v alias="$HOST_ALIAS" '
-    /^# BEGIN (codex-)?gpu managed by (vast-setup|gpu-provision)[.]sh$/ { skip=1; next }
-    /^# END (codex-)?gpu managed by (vast-setup|gpu-provision)[.]sh$/ { skip=0; next }
+    /^# BEGIN (codex-)?gpu managed by (vast-setup|gpu-provision)[.]sh$/ {
+      if (skip) exit 1
+      skip=1
+      next
+    }
+    /^# END (codex-)?gpu managed by (vast-setup|gpu-provision)[.]sh$/ {
+      if (!skip) exit 1
+      skip=0
+      next
+    }
     skip { next }
-    $1 == "Host" && $2 == alias { skip_host=1; next }
-    skip_host && $1 == "Host" { skip_host=0 }
-    skip_host { next }
+    $1 == "Host" && $2 == alias {
+      print "unmanaged Host " alias " block already exists" > "/dev/stderr"
+      exit 1
+    }
     { print }
+    END { if (skip) exit 1 }
   ' "$HOME/.ssh/config" >"$tmp"
 
   {
-    cat "$tmp"
     printf '\n# BEGIN gpu managed by gpu-provision.sh\n'
     printf 'Host %s\n' "$HOST_ALIAS"
     printf '  HostName %s\n' "$host"
@@ -366,9 +376,10 @@ update_ssh_config() {
     printf '  RequestTTY force\n'
     printf '  StrictHostKeyChecking accept-new\n'
     printf '# END gpu managed by gpu-provision.sh\n'
-  } >"$HOME/.ssh/config"
+  } >>"$tmp"
 
-  rm -f "$tmp"
+  mv "$tmp" "$HOME/.ssh/config"
+  trap - RETURN
   log "Updated $HOST_ALIAS -> $provider $user@$host:$port"
 }
 
@@ -394,7 +405,7 @@ run_remote_setup() {
   stage="$(mktemp -d -t gpu-provision.XXXXXX)"
   trap 'rm -rf "$stage"; trap - RETURN' RETURN
 
-  COPYFILE_DISABLE=1 tar --no-xattrs \
+  tar --no-xattrs \
     --exclude "$(basename "$DOTFILES_DIR")/.git/fsmonitor--daemon.ipc" \
     -czf "$stage/$(basename "$REMOTE_DOTFILES_ARCHIVE")" \
     -C "$(dirname "$DOTFILES_DIR")" \
@@ -408,18 +419,11 @@ run_remote_setup() {
     "REMOTE_DEPLOY_KEY='$REMOTE_DEPLOY_KEY' DOTFILES_ARCHIVE='$REMOTE_DOTFILES_ARCHIVE' bash '$REMOTE_GPU_SETUP'"
 }
 
-install_ghostty_terminfo() {
-  require_command infocmp
-  local ghostty_terminfo_dir="/Applications/Ghostty.app/Contents/Resources/terminfo"
-
-  log "Installing Ghostty terminfo on remote..."
-  if infocmp -x xterm-ghostty >/dev/null 2>&1; then
-    infocmp -x xterm-ghostty | ssh -T "$HOST_ALIAS" 'mkdir -p ~/.terminfo && tic -x -o ~/.terminfo /dev/stdin'
-  elif [ -d "$ghostty_terminfo_dir" ] && infocmp -A "$ghostty_terminfo_dir" -x xterm-ghostty >/dev/null 2>&1; then
-    infocmp -A "$ghostty_terminfo_dir" -x xterm-ghostty | ssh -T "$HOST_ALIAS" 'mkdir -p ~/.terminfo && tic -x -o ~/.terminfo /dev/stdin'
-  else
-    die "local xterm-ghostty terminfo not found"
-  fi
+install_terminfo() {
+  log "Installing Alacritty terminfo on remote..."
+  infocmp -x alacritty >/dev/null 2>&1 || die "local alacritty terminfo not found"
+  infocmp -x alacritty |
+    ssh -T "$HOST_ALIAS" 'mkdir -p ~/.terminfo && tic -x -o ~/.terminfo /dev/stdin'
 }
 
 main() {
@@ -437,7 +441,7 @@ main() {
 
   update_ssh_config "$candidate"
   wait_for_ssh
-  install_ghostty_terminfo
+  install_terminfo
   run_remote_setup
   log "Done."
 }
